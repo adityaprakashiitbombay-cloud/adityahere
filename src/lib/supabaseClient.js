@@ -499,6 +499,80 @@ export function getOrCreateVisitorDeviceId() {
   }
 }
 
+export async function reverseGeocodeCoords(latitude, longitude) {
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const locality = data.locality || data.localityInfo?.informative?.[0]?.name || '';
+      const city = data.city || data.principalSubdivision || '';
+      const country = data.countryName || '';
+      const parts = Array.from(new Set([locality, city, country].filter(Boolean)));
+      if (parts.length > 0) {
+        return parts.join(', ') + ' (🎯 GPS Exact)';
+      }
+    }
+  } catch (e) {
+    console.warn('Reverse geocode fetch error:', e);
+  }
+
+  // Backup reverse geocoding via OpenStreetMap Nominatim
+  try {
+    const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`;
+    const res = await fetch(nomUrl, { headers: { 'User-Agent': 'AdityaProfile/2.0' } });
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address;
+      if (addr) {
+        const place = addr.suburb || addr.neighbourhood || addr.city_district || addr.city || addr.town || addr.village;
+        const state = addr.state || addr.country;
+        if (place) return `${place}, ${state} (🎯 GPS Exact)`;
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+export function requestExactGPSLocation() {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const exactAddress = await reverseGeocodeCoords(latitude, longitude);
+        if (exactAddress) {
+          resolve({
+            latitude,
+            longitude,
+            locationString: exactAddress
+          });
+        } else {
+          resolve({
+            latitude,
+            longitude,
+            locationString: `GPS ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}° (🎯 GPS Exact)`
+          });
+        }
+      },
+      (err) => {
+        console.warn('GPS position request skipped/denied:', err?.message);
+        resolve(null);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 60000
+      }
+    );
+  });
+}
+
 export async function fetchRealVisitorLocation() {
   try {
     // Free, no API key required geolocation lookup
@@ -506,12 +580,14 @@ export async function fetchRealVisitorLocation() {
     if (res.ok) {
       const data = await res.json();
       if (data.ip) {
+        const locName = data.city && data.country_name ? `${data.city}${data.region ? ', ' + data.region : ''}, ${data.country_name}` : 'Live Session';
         return {
           ip: data.ip,
           city: data.city || 'Local',
           region: data.region || '',
           country: data.country_name || 'Online',
           org: data.org || 'ISP Network',
+          location: locName + ' (📡 ISP Node)',
           device: getDeviceType()
         };
       }
@@ -532,6 +608,7 @@ export async function fetchRealVisitorLocation() {
           region: '',
           country: 'Online',
           org: 'ISP Network',
+          location: 'Live ISP Net (📡 ISP Node)',
           device: getDeviceType()
         };
       }
@@ -544,6 +621,7 @@ export async function fetchRealVisitorLocation() {
     region: '',
     country: 'Client Host',
     org: 'Localhost',
+    location: 'Localhost Session',
     device: getDeviceType()
   };
 }
@@ -567,6 +645,46 @@ export function formatDuration(seconds) {
   const hours = Math.floor(mins / 60);
   const remMins = mins % 60;
   return `${hours}h ${remMins}m`;
+}
+
+export async function upgradeSessionWithGPSLocation() {
+  try {
+    const gps = await requestExactGPSLocation();
+    if (!gps || !gps.locationString) return null;
+
+    const deviceId = getOrCreateVisitorDeviceId();
+    const storedLogs = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
+    if (!storedLogs) return null;
+
+    const profiles = JSON.parse(storedLogs);
+    const updated = profiles.map(p => {
+      if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
+        return {
+          ...p,
+          location: gps.locationString,
+          isGpsExact: true,
+          activities: Array.isArray(p.activities)
+            ? [...p.activities, `🎯 GPS Location Resolved: ${gps.locationString}`].slice(-100)
+            : [`🎯 GPS Location Resolved: ${gps.locationString}`]
+        };
+      }
+      return p;
+    });
+
+    localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('visitor_sessions').update({
+          location: gps.locationString
+        }).eq('deviceId', deviceId);
+      } catch (e) {}
+    }
+
+    return gps.locationString;
+  } catch (e) {
+    return null;
+  }
 }
 
 export async function recordRealVisitorSession() {
@@ -601,7 +719,7 @@ export async function recordRealVisitorSession() {
         ...prev,
         deviceId,
         ip: geo.ip,
-        location: geo.city && geo.country ? `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country}` : prev.location,
+        location: prev.location || geo.location,
         device: geo.device,
         isp: geo.org,
         lastSeen: nowIso,
@@ -619,7 +737,7 @@ export async function recordRealVisitorSession() {
         id: sessionId,
         deviceId,
         ip: geo.ip,
-        location: geo.city && geo.country ? `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country}` : 'Live Session',
+        location: geo.location,
         city: geo.city,
         country: geo.country,
         isp: geo.org,
@@ -648,6 +766,11 @@ export async function recordRealVisitorSession() {
         await supabase.from('visitor_sessions').upsert([profileRecord]);
       } catch (e) {}
     }
+
+    // Trigger high-accuracy GPS upgrade asynchronously in background
+    setTimeout(() => {
+      upgradeSessionWithGPSLocation();
+    }, 1200);
 
     return profileRecord;
   } catch (e) {
