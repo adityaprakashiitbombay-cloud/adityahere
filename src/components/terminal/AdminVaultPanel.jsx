@@ -180,7 +180,7 @@ export default function AdminVaultPanel({
                     No matching visitor sessions recorded yet.
                   </div>
                 ) : (
-                      {filteredSessions.map((s, idx) => {
+                  filteredSessions.map((s, idx) => {
                         const devCode = s.deviceId || `DEV-${s.id?.slice(-6) || 'LOCAL'}`;
                         const visits = s.visitCount || 1;
                         const tasks = s.totalActionsCount || (Array.isArray(s.activities) ? s.activities.length : 1);
@@ -249,7 +249,7 @@ export default function AdminVaultPanel({
                             </div>
                           </div>
                         );
-                      })}
+                      })
                 )}
               </div>
             </motion.div>
