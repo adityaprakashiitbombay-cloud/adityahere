@@ -1,0 +1,216 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Semantic Neo-Brutalist Color Tokens */
+  --color-primary: #39FF14;
+  --color-primary-glow: rgba(57, 255, 20, 0.4);
+  --color-secondary: #00E5FF;
+  --color-secondary-glow: rgba(0, 229, 255, 0.4);
+  --color-accent: #FFE600;
+  --color-accent-glow: rgba(255, 230, 0, 0.4);
+  --color-danger: #FF007F;
+  --color-bg: #000000;
+  --color-surface: #050505;
+  --color-border: #ffffff;
+  
+  /* Brutalist Shadow Tokens */
+  --shadow-primary: 6px 6px 0px 0px var(--color-primary);
+  --shadow-secondary: 6px 6px 0px 0px var(--color-secondary);
+  --shadow-accent: 6px 6px 0px 0px var(--color-accent);
+  --shadow-white: 6px 6px 0px 0px #ffffff;
+  --shadow-sm: 3px 3px 0px 0px #ffffff;
+  
+  /* Transition Timing */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  * {
+    border-radius: 0px !important;
+  }
+  
+  /* Universal Accessible Focus Outlines */
+  *:focus-visible {
+    outline: 3px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
+  }
+  
+  body {
+    background-color: var(--color-bg);
+    color: #ffffff;
+    font-family: 'JetBrains Mono', 'Space Mono', monospace;
+  }
+}
+
+/* Accessibility Skip Link */
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  background-color: var(--color-primary);
+  color: #000000;
+  font-weight: 800;
+  border: 2px solid #ffffff;
+  z-index: 9999;
+  transition: top 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+/* Custom Neo-Brutalist Utility Classes */
+.brutal-card {
+  background-color: var(--color-surface);
+  border: 3px solid var(--color-border);
+  box-shadow: var(--shadow-primary);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.brutal-btn {
+  background-color: var(--color-primary);
+  color: #000000;
+  font-weight: 800;
+  border: 3px solid var(--color-border);
+  box-shadow: 4px 4px 0px 0px #ffffff;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.brutal-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #ffffff;
+  background-color: #4fff2e;
+}
+
+.brutal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px 0px #ffffff;
+}
+
+.brutal-input {
+  background-color: var(--color-bg);
+  border: 2px solid var(--color-border);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+  outline: none;
+}
+
+.brutal-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 4px 4px 0px 0px var(--color-primary);
+}
+
+/* Seamless 60FPS Continuous Marquee */
+@keyframes marquee-smooth {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-smooth {
+  display: inline-flex;
+  width: max-content;
+  animation: marquee-smooth 30s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-smooth:hover {
+  animation-play-state: paused;
+}
+
+/* Animated Holographic Beam Scanline */
+@keyframes scanbeam {
+  0% {
+    top: -20%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 120%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scanbeam {
+  animation: scanbeam 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Neon Pulse Aura */
+@keyframes neonPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(57, 255, 20, 0.8);
+  }
+}
+
+.animate-neon-pulse {
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+/* Matrix Shimmer Skeleton Animation */
+@keyframes matrixShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #111111 25%, #222222 50%, #111111 75%);
+  background-size: 200% 100%;
+  animation: matrixShimmer 1.5s infinite;
+}
+
+/* AI Thinking 3 Dots Bounce Animation */
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: translateY(0) scale(0.85);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-6px) scale(1.15);
+    opacity: 1;
+  }
+}
+
+.dot-bounce-1 {
+  animation: dotBounce 1.2s infinite ease-in-out;
+  animation-delay: 0s;
+}
+.dot-bounce-2 {
+  animation: dotBounce 1.2s infinite ease-in-out;
+  animation-delay: 0.2s;
+}
+.dot-bounce-3 {
+  animation: dotBounce 1.2s infinite ease-in-out;
+  animation-delay: 0.4s;
+}
+
+/* Cyber Retro Scanlines Texture */
+.cyber-scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0, 0, 0, 0.4) 50%,
+    rgba(0, 0, 0, 0.4)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <rect width="128" height="128" rx="24" fill="#000000" stroke="#39FF14" stroke-width="8" />
+  <text 
+    x="50%" 
+    y="56%" 
+    dominant-baseline="middle" 
+    text-anchor="middle" 
+    font-family="JetBrains Mono, Space Mono, monospace, system-ui" 
+    font-weight="900" 
+    font-size="52" 
+    fill="#FFFFFF" 
+    letter-spacing="-3"
+  >
+    ah<tspan fill="#39FF14">.</tspan>
+  </text>
+  <rect x="20" y="96" width="88" height="6" fill="#39FF14" rx="2" />
+</svg>

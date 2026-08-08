@@ -1,0 +1,21 @@
+{
+  "name": "adityahere. // Neo-Brutalist Developer Portfolio",
+  "short_name": "adityahere.",
+  "description": "Aditya Prakash - Student, IIT JEE Aspirant, IOQM (2x) Qualifier, Tech Enthusiast & Innovator.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#39FF14",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}
