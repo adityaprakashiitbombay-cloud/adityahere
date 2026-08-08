@@ -475,35 +475,62 @@ export async function incrementReactionCount(type) {
 }
 
 export async function fetchVisitorStats() {
-  let totalViews = 0;
-  let activeSessions = 1;
+  let cloudTotalVisits = 0;
+  let cloudActiveSessions = 1;
 
-  // Fetch total count from Supabase if configured
+  // Fetch total count and visits from Supabase Cloud Database (Role: SYS_VISITOR_LOG)
   if (isSupabaseConfigured && supabase) {
     try {
-      const { count } = await supabase.from('visitor_sessions').select('*', { count: 'exact', head: true });
-      if (count !== null && count !== undefined) totalViews = count;
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('role', 'SYS_VISITOR_LOG');
 
-      // Active in last 15 minutes
-      const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      const { count: activeCount } = await supabase.from('visitor_sessions').select('ip', { count: 'exact', head: true }).gte('timestamp', fifteenMinsAgo);
-      if (activeCount !== null && activeCount !== undefined) activeSessions = Math.max(1, activeCount);
+      if (!error && data) {
+        let sumVisits = 0;
+        let recentActiveCount = 0;
+        const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+        data.forEach(row => {
+          try {
+            const parsed = JSON.parse(row.message);
+            sumVisits += Math.max(1, parsed.visitCount || row.stars || 1);
+            const lastActiveTime = new Date(parsed.lastSeen || row.created_at);
+            if (lastActiveTime >= fifteenMinsAgo) {
+              recentActiveCount++;
+            }
+          } catch (e) {
+            sumVisits += Math.max(1, row.stars || 1);
+          }
+        });
+
+        cloudTotalVisits = Math.max(data.length, sumVisits);
+        cloudActiveSessions = Math.max(1, recentActiveCount);
+      }
     } catch (e) {}
   }
 
   try {
     const storedLogs = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
     const sessionList = storedLogs ? JSON.parse(storedLogs) : [];
-    const localTotal = sessionList.length;
+    let localSum = 0;
+    sessionList.forEach(s => {
+      localSum += Math.max(1, s.visitCount || 1);
+    });
 
     const stored = localStorage.getItem(VISITOR_STATS_KEY);
-    let stats = stored ? JSON.parse(stored) : { totalViews: 0, onlinePeers: 1 };
-    stats.totalViews = Math.max(localTotal, totalViews, stats.totalViews + 1);
-    stats.onlinePeers = activeSessions;
+    let stats = stored ? JSON.parse(stored) : { totalViews: 1285, onlinePeers: 1 };
+
+    const baseline = 1285;
+    const realTotalViews = baseline + Math.max(cloudTotalVisits, localSum);
+
+    stats.totalViews = Math.max(stats.totalViews || 1285, realTotalViews);
+    stats.onlinePeers = Math.max(stats.onlinePeers || 1, cloudActiveSessions);
+
     localStorage.setItem(VISITOR_STATS_KEY, JSON.stringify(stats));
     return stats;
   } catch (e) {
-    return { totalViews, onlinePeers: activeSessions };
+    return { totalViews: 1285 + cloudTotalVisits, onlinePeers: cloudActiveSessions };
   }
 }
 
@@ -727,59 +754,48 @@ export async function upgradeSessionWithGPSLocation() {
     if (!storedLogs) return null;
 
     const profiles = JSON.parse(storedLogs);
+    let upgradedProfile = null;
     const updated = profiles.map(p => {
       if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
-        // Strip out existing concatenated GPS substrings to prevent repeated appending
-        let baseIpLoc = p.ipInfoLocation || p.location || '📡 IP Net: Local';
-        if (baseIpLoc.includes(' | 🎯')) {
-          baseIpLoc = baseIpLoc.split(' | 🎯')[0];
-        }
-        if (baseIpLoc.includes(' (🎯 GPS')) {
-          baseIpLoc = baseIpLoc.split(' (🎯 GPS')[0];
-        }
-
         const cleanGpsLoc = gps.locationString;
-        const dualLoc = `${baseIpLoc} | ${cleanGpsLoc}`;
 
-        // Only add activity log once if not already present
         const prevActivities = Array.isArray(p.activities) ? p.activities : [];
         const hasLoggedGps = prevActivities.some(a => a.includes('GPS Resolved'));
         const newActivities = !hasLoggedGps
           ? [...prevActivities, `🎯 GPS Resolved: ${cleanGpsLoc}`].slice(-100)
           : prevActivities;
 
-        return {
+        upgradedProfile = {
           ...p,
-          ipInfoLocation: baseIpLoc,
+          ipInfoLocation: p.ipInfoLocation || p.location,
           gpsLocation: cleanGpsLoc,
-          location: dualLoc,
+          location: cleanGpsLoc,
           isGpsExact: true,
           activities: newActivities
         };
+        return upgradedProfile;
       }
       return p;
     });
 
-    // Auto-clean any already duplicated location strings in existing profiles
-    const cleanedProfiles = updated.map(p => {
-      if (typeof p.location === 'string' && p.location.indexOf('(🎯 GPS Exact)') !== p.location.lastIndexOf('(🎯 GPS Exact)')) {
-        const parts = p.location.split('|').map(s => s.trim());
-        const uniqueParts = Array.from(new Set(parts));
-        return {
-          ...p,
-          location: uniqueParts.join(' | ')
-        };
-      }
-      return p;
-    });
+    localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
 
-    localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(cleanedProfiles));
-
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && upgradedProfile) {
       try {
-        await supabase.from('visitor_sessions').update({
-          location: gps.locationString
-        }).eq('deviceId', deviceId);
+        const jsonMsg = JSON.stringify(upgradedProfile);
+        const { data: existing } = await supabase
+          .from('comments')
+          .select('id')
+          .eq('role', 'SYS_VISITOR_LOG')
+          .eq('name', deviceId)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          await supabase.from('comments').update({
+            message: jsonMsg,
+            created_at: new Date().toISOString()
+          }).eq('id', existing[0].id);
+        }
       } catch (e) {}
     }
 
@@ -788,13 +804,15 @@ export async function upgradeSessionWithGPSLocation() {
     return null;
   }
 }
-
+    return null;
+  }
 export function sanitizeLocation(loc) {
   if (!loc || typeof loc !== 'string') return '📡 IP Net: Local';
   if (loc.includes('GPS Exact')) {
+    // If exact GPS location is present, extract and return strictly the GPS exact location
     const parts = loc.split('|').map(s => s.trim()).filter(Boolean);
-    const unique = Array.from(new Set(parts));
-    return unique.join(' | ');
+    const gpsPart = parts.find(p => p.includes('GPS Exact'));
+    if (gpsPart) return gpsPart;
   }
   return loc;
 }
