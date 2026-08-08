@@ -292,6 +292,8 @@ CRITICAL FORMATTING & STYLE RULES:
     if (!q) return '';
     const qLower = q.toLowerCase();
 
+    logVisitorActivity(`CLI: ${q.slice(0, 30)}`);
+
     if (q === 'ALPHA1845' || qLower === 'alpha1845' || qLower === 'alpha') {
       setIsAdminUnlocked(true);
       localStorage.setItem('adityahere_admin_unlocked', 'true');
@@ -302,7 +304,7 @@ CRITICAL FORMATTING & STYLE RULES:
 Welcome back, Aditya! Admin Matrix & Server CMS is now ACTIVE.
 
 AVAILABLE ADMIN COMMANDS & SHORTCUTS:
-• visitors     : Read real live visitor IPs, geolocation & devices table
+• visitors     : Read real live visitor IPs, location, dwell time & activity trail table
 • clearvisitors: Purge real visitor sessions table
 • messages     : Read all private visitor direct messages
 • chats        : Read all visitor AI chatbot transcripts
@@ -325,8 +327,15 @@ AVAILABLE ADMIN COMMANDS & SHORTCUTS:
       if (!sessions || sessions.length === 0) {
         return '🌐 REAL VISITORS TABLE: No visitor sessions recorded yet.';
       }
-      return `🌐 REAL LIVE VISITORS TABLE (${sessions.length} recorded sessions):\n----------------------------------------------------\n` +
-        sessions.map((s, i) => `${i + 1}. [IP: ${s.ip} | ${s.location}]: Device: "${s.device}" (${new Date(s.timestamp).toLocaleString()})`).join('\n');
+      return `🌐 REAL LIVE VISITORS TELEMETRY TABLE (${sessions.length}/100 recorded sessions):\n----------------------------------------------------\n` +
+        sessions.map((s, i) => {
+          const acts = Array.isArray(s.activities) && s.activities.length > 0 ? s.activities.join(' ➔ ') : '📍 Active Session';
+          const dwell = formatDuration(s.duration_seconds || 1);
+          return `${i + 1}. [IP: ${s.ip} | ${s.location}]
+   • Device: ${s.device} | Network: ${s.isp || 'ISP Net'}
+   • Entry: ${new Date(s.timestamp).toLocaleString()} | Dwell Time: ⏱️ ${dwell}
+   • Activity: ${acts}`;
+        }).join('\n\n');
     }
 
     if (qLower === 'clearvisitors') {

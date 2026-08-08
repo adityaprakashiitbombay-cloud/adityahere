@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Rocket, Brain, Trophy, Zap, Sparkles } from 'lucide-react';
-import { fetchReactionCounts, incrementReactionCount } from '../lib/supabaseClient';
+import { fetchReactionCounts, incrementReactionCount, logVisitorActivity } from '../lib/supabaseClient';
 import { fireAcademicVictoryConfetti } from '../utils/confettiEffects';
 
 export default function InteractiveReactionWidget({ playClickSound }) {
@@ -22,6 +22,8 @@ export default function InteractiveReactionWidget({ playClickSound }) {
 
   const handleReaction = (type, emoji, e) => {
     if (playClickSound) playClickSound();
+
+    logVisitorActivity(`Reacted ${emoji} ${type.toUpperCase()}`);
 
     // Increment count
     incrementReactionCount(type).then(setCounts);

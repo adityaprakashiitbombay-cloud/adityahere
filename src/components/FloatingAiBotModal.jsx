@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Send, X, Terminal, Copy, Check, Sparkles, RefreshCw } from 'lucide-react';
-import { saveAiChatConversation } from '../lib/supabaseClient';
+import { saveAiChatConversation, logVisitorActivity } from '../lib/supabaseClient';
 import AiThinkingDots from './AiThinkingDots';
 
 export default function FloatingAiBotModal({ playClickSound }) {
@@ -16,6 +16,7 @@ export default function FloatingAiBotModal({ playClickSound }) {
   const handleOpen = () => {
     if (playClickSound) playClickSound();
     setIsOpen(true);
+    logVisitorActivity('Opened AI Quick Chat Bot');
   };
 
   const handleClose = () => {
@@ -39,6 +40,8 @@ export default function FloatingAiBotModal({ playClickSound }) {
     if (playClickSound) playClickSound();
     setIsProcessing(true);
     setAiResponse(null);
+    logVisitorActivity(`Asked AI: "${promptToSend.slice(0, 40)}"`);
+
 
     // Call API / synthesize response with thinking delay
     try {

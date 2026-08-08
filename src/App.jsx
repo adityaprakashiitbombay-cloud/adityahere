@@ -74,6 +74,7 @@ class ErrorBoundary extends Component {
 }
 
 import { fireAcademicVictoryConfetti } from './utils/confettiEffects';
+import { updateVisitorDwellTime, logVisitorActivity } from './lib/supabaseClient';
 
 export default function App() {
   // Show system boot // stage 1 splash screen on load
@@ -82,6 +83,22 @@ export default function App() {
 
   const { soundEnabled, setSoundEnabled, playUiClick, playHeavenlyMusic, playConfettiSound } = useSoundEffects();
   const location = useLocation();
+
+  // Track live user dwell time & route navigation activities
+  React.useEffect(() => {
+    const pathName = location.pathname || '/';
+    logVisitorActivity(`Navigated to ${pathName}`);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      updateVisitorDwellTime(elapsedSeconds);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleFinishSplash = () => {
     setShowSplash(false);
@@ -92,6 +109,7 @@ export default function App() {
       fireAcademicVictoryConfetti();
     }
   };
+
 
   return (
     <ErrorBoundary locationKey={location.pathname}>

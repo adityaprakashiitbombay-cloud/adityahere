@@ -474,14 +474,11 @@ export function subscribeToRealtimePresence(onCountChange) {
   }
 
   // Local fallback
-  return () => {};
-}
-
-
-// ----------------------------------------------------
-// 6. 100% Real Live Visitor Geolocation Telemetry Engine
+  return () => {};// ----------------------------------------------------
+// 6. 100% Real Live Visitor Geolocation Telemetry Engine (100 Capacity)
 // ----------------------------------------------------
 const REAL_VISITOR_LOGS_KEY = 'adityahere_real_visitor_logs_v1';
+let currentActiveSessionId = null;
 
 export async function fetchRealVisitorLocation() {
   try {
@@ -542,18 +539,36 @@ function getDeviceType() {
   return 'Desktop Web';
 }
 
+export function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '0s';
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins < 60) return `${mins}m ${secs}s`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return `${hours}h ${remMins}m`;
+}
+
 export async function recordRealVisitorSession() {
   try {
     const geo = await fetchRealVisitorLocation();
+    const sessionId = 'vis_' + Date.now();
+    currentActiveSessionId = sessionId;
+
+    const initialActivity = [`📍 Session Started (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`];
+
     const sessionRecord = {
-      id: 'vis_' + Date.now(),
+      id: sessionId,
       ip: geo.ip,
       location: geo.city && geo.country ? `${geo.city}${geo.region ? ', ' + geo.region : ''}, ${geo.country}` : 'Live Session',
       city: geo.city,
       country: geo.country,
       isp: geo.org,
       device: geo.device,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      duration_seconds: 1,
+      activities: initialActivity
     };
 
     // Store in Supabase if table exists
@@ -565,9 +580,9 @@ export async function recordRealVisitorSession() {
       }
     }
 
-    // Store in LocalStorage
+    // Store in LocalStorage (Capacity: 100)
     const existing = await fetchRealVisitorSessions();
-    const updated = [sessionRecord, ...existing.filter(s => s.ip !== sessionRecord.ip || Date.now() - new Date(s.timestamp).getTime() > 3600000)].slice(0, 50);
+    const updated = [sessionRecord, ...existing.filter(s => s.id !== sessionId && (s.ip !== sessionRecord.ip || Date.now() - new Date(s.timestamp).getTime() > 3600000))].slice(0, 100);
     localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
 
     return sessionRecord;
@@ -576,15 +591,72 @@ export async function recordRealVisitorSession() {
   }
 }
 
+export async function updateVisitorDwellTime(seconds) {
+  if (!currentActiveSessionId) return;
+
+  try {
+    const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
+    if (!stored) return;
+    const sessions = JSON.parse(stored);
+    const updated = sessions.map(s => {
+      if (s.id === currentActiveSessionId) {
+        return { ...s, duration_seconds: Math.max(s.duration_seconds || 0, seconds) };
+      }
+      return s;
+    });
+    localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('visitor_sessions').update({ duration_seconds: seconds }).eq('id', currentActiveSessionId);
+      } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+export async function logVisitorActivity(activityDescription) {
+  if (!activityDescription) return;
+
+  try {
+    const timeTag = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const formattedAction = `[${timeTag}] ${activityDescription}`;
+
+    const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
+    if (stored) {
+      const sessions = JSON.parse(stored);
+      const updated = sessions.map(s => {
+        if (s.id === currentActiveSessionId || (!currentActiveSessionId && s === sessions[0])) {
+          const currentActs = Array.isArray(s.activities) ? s.activities : [];
+          // Avoid duplicate rapid log entries
+          if (currentActs[currentActs.length - 1] !== formattedAction) {
+            return { ...s, activities: [...currentActs, formattedAction].slice(-25) };
+          }
+        }
+        return s;
+      });
+      localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
+    }
+
+    if (isSupabaseConfigured && supabase && currentActiveSessionId) {
+      try {
+        const { data } = await supabase.from('visitor_sessions').select('activities').eq('id', currentActiveSessionId).single();
+        const existingActs = data && Array.isArray(data.activities) ? data.activities : [];
+        const nextActs = [...existingActs, formattedAction].slice(-25);
+        await supabase.from('visitor_sessions').update({ activities: nextActs }).eq('id', currentActiveSessionId);
+      } catch (e) {}
+    }
+  } catch (e) {}
+}
+
 export async function fetchRealVisitorSessions() {
-  // 1. Try Supabase
+  // 1. Try Supabase (Capacity 100)
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('visitor_sessions')
         .select('*')
         .order('timestamp', { ascending: false })
-        .limit(50);
+        .limit(100);
       if (!error && data && data.length > 0) return data;
     } catch (e) {}
   }
@@ -598,7 +670,6 @@ export async function fetchRealVisitorSessions() {
   return [];
 }
 
-
 export async function clearRealVisitorSessions() {
   try {
     localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify([]));
@@ -610,5 +681,6 @@ export async function clearRealVisitorSessions() {
     return false;
   }
 }
+
 
 
