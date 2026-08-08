@@ -576,8 +576,34 @@ export function requestExactGPSLocation() {
 }
 
 export async function fetchRealVisitorLocation() {
+  const token = import.meta.env.VITE_IPINFO_TOKEN || 'cbeda1c63da1c3';
+
+  // Primary: IPInfo API with token
   try {
-    // Free, no API key required geolocation lookup
+    const res = await fetch(`https://ipinfo.io/json?token=${token}`, { timeout: 4000 });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ip) {
+        const locName = `${data.city || 'Live'}, ${data.region || ''}, ${data.country || 'IN'} (${data.org || 'ISP'})`;
+        return {
+          ip: data.ip,
+          city: data.city || 'Local',
+          region: data.region || '',
+          country: data.country || 'Online',
+          org: data.org || 'ISP Network',
+          postal: data.postal || '',
+          ipInfoLocation: `📡 IPInfo Net: ${data.city || ''}, ${data.region || ''}, ${data.country || ''} (${data.org || 'ISP'})`,
+          location: `📡 IPInfo Net: ${locName}`,
+          device: getDeviceType()
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('IPInfo API lookup error, using fallback:', e);
+  }
+
+  // Fallback 1: ipapi.co
+  try {
     const res = await fetch('https://ipapi.co/json/', { timeout: 4000 });
     if (res.ok) {
       const data = await res.json();
@@ -589,28 +615,8 @@ export async function fetchRealVisitorLocation() {
           region: data.region || '',
           country: data.country_name || 'Online',
           org: data.org || 'ISP Network',
+          ipInfoLocation: `📡 IP Net: ${locName}`,
           location: locName + ' (📡 ISP Node)',
-          device: getDeviceType()
-        };
-      }
-    }
-  } catch (e) {
-    console.warn('Primary IP lookup error, using fallback', e);
-  }
-
-  // Fallback lookup
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.ip) {
-        return {
-          ip: data.ip,
-          city: 'Live Net',
-          region: '',
-          country: 'Online',
-          org: 'ISP Network',
-          location: 'Live ISP Net (📡 ISP Node)',
           device: getDeviceType()
         };
       }
@@ -623,6 +629,7 @@ export async function fetchRealVisitorLocation() {
     region: '',
     country: 'Client Host',
     org: 'Localhost',
+    ipInfoLocation: '📡 IP Net: Localhost',
     location: 'Localhost Session',
     device: getDeviceType()
   };
@@ -661,13 +668,15 @@ export async function upgradeSessionWithGPSLocation() {
     const profiles = JSON.parse(storedLogs);
     const updated = profiles.map(p => {
       if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
+        const dualLoc = `${p.ipInfoLocation || p.location} | ${gps.locationString}`;
         return {
           ...p,
-          location: gps.locationString,
+          gpsLocation: gps.locationString,
+          location: dualLoc,
           isGpsExact: true,
           activities: Array.isArray(p.activities)
-            ? [...p.activities, `🎯 GPS Location Resolved: ${gps.locationString}`].slice(-100)
-            : [`🎯 GPS Location Resolved: ${gps.locationString}`]
+            ? [...p.activities, `🎯 GPS Resolved: ${gps.locationString}`].slice(-100)
+            : [`🎯 GPS Resolved: ${gps.locationString}`]
         };
       }
       return p;
