@@ -340,7 +340,8 @@ Answer visitor queries with extreme intelligence, clarity, and neo-brutalist cha
         },
         body: JSON.stringify({
           model: 'openrouter/auto',
-          max_tokens: 800,
+          include_reasoning: false,
+          max_tokens: 600,
           messages: [
             { role: 'system', content: systemInstruction },
             { role: 'user', content: p }
@@ -351,8 +352,8 @@ Answer visitor queries with extreme intelligence, clarity, and neo-brutalist cha
       if (resp.ok) {
         const data = await resp.json();
         const msg = data.choices?.[0]?.message;
-        const liveText = msg?.content || msg?.reasoning || msg?.reasoning_details?.[0]?.summary;
-        if (liveText && liveText.trim()) {
+        const liveText = msg?.content;
+        if (liveText && typeof liveText === 'string' && liveText.trim() && !liveText.toLowerCase().includes('planning engagement options')) {
           return cleanMarkdownText(liveText.trim());
         }
       }

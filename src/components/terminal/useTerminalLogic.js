@@ -177,19 +177,22 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
               headers,
               body: JSON.stringify({
                 model: modelCandidate,
+                include_reasoning: false,
                 messages: [
                   { role: 'system', content: systemInstruction },
                   { role: 'user', content: userPrompt }
                 ],
-                max_tokens: 800
+                max_tokens: 600
               })
             });
 
             if (resp.ok) {
               const data = await resp.json();
               const msg = data.choices?.[0]?.message;
-              const text = msg?.content || msg?.reasoning || msg?.reasoning_details?.[0]?.summary;
-              if (text && text.trim()) return cleanMarkdownText(text.trim());
+              const text = msg?.content;
+              if (text && typeof text === 'string' && text.trim() && !text.toLowerCase().includes('planning engagement options')) {
+                return cleanMarkdownText(text.trim());
+              }
             }
           } catch (e) {}
         }
