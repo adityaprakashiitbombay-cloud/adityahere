@@ -728,6 +728,16 @@ export async function upgradeSessionWithGPSLocation() {
   }
 }
 
+export function sanitizeLocation(loc) {
+  if (!loc || typeof loc !== 'string') return '📡 IP Net: Local';
+  if (loc.includes('GPS Exact')) {
+    const parts = loc.split('|').map(s => s.trim()).filter(Boolean);
+    const unique = Array.from(new Set(parts));
+    return unique.join(' | ');
+  }
+  return loc;
+}
+
 export async function recordRealVisitorSession() {
   try {
     const geo = await fetchRealVisitorLocation();
@@ -760,7 +770,7 @@ export async function recordRealVisitorSession() {
         ...prev,
         deviceId,
         ip: geo.ip,
-        location: prev.location || geo.location,
+        location: sanitizeLocation(prev.location || geo.location),
         device: geo.device,
         isp: geo.org,
         lastSeen: nowIso,
@@ -778,7 +788,7 @@ export async function recordRealVisitorSession() {
         id: sessionId,
         deviceId,
         ip: geo.ip,
-        location: geo.location,
+        location: sanitizeLocation(geo.location),
         city: geo.city,
         country: geo.country,
         isp: geo.org,
@@ -797,6 +807,10 @@ export async function recordRealVisitorSession() {
     }
 
     // Sort profiles by last active time and cap at 100 devices
+    existingProfiles = existingProfiles.map(p => ({
+      ...p,
+      location: sanitizeLocation(p.location)
+    }));
     existingProfiles.sort((a, b) => new Date(b.lastSeen || b.timestamp) - new Date(a.lastSeen || a.timestamp));
     existingProfiles = existingProfiles.slice(0, 100);
     localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(existingProfiles));
