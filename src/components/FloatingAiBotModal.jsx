@@ -266,54 +266,99 @@ export default function FloatingAiBotModal({ playClickSound }) {
   );
 }
 
-// Helper to fetch AI answer with realistic thinking delay & intelligent prompt synthesis
-async function fetchAiAnswer(prompt) {
-  const p = prompt.trim().toLowerCase();
-  
-  // Simulate thinking delay for realistic 3-dot animated processing
-  await new Promise((res) => setTimeout(res, 750));
+const cleanMarkdownText = (str) => {
+  if (!str) return '';
+  let cleaned = str;
+  cleaned = cleaned.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1 / $2)');
+  cleaned = cleaned.replace(/\\sqrt\[3\]\{([^{}]+)\}/g, '∛($1)');
+  cleaned = cleaned.replace(/\\sqrt\{([^{}]+)\}/g, '√($1)');
+  cleaned = cleaned.replace(/x_\{n\+1\}/g, 'xₙ₊₁');
+  cleaned = cleaned.replace(/x_n\^2/g, 'xₙ²');
+  cleaned = cleaned.replace(/_([0-9a-z])/g, '₍$1₎');
+  cleaned = cleaned.replace(/\^([0-9a-z])/g, '⁽$1⁾');
+  cleaned = cleaned.replace(/\\[a-zA-Z]+/g, '');
+  cleaned = cleaned.replace(/[\$\{\}]/g, '');
+  return cleaned;
+};
 
-  // Greetings & Conversational Starts
+function synthesizeDynamicFallback(prompt) {
+  const p = prompt.toLowerCase();
+
   if (/^(hi|hello|hey|heyy|heya|hlo|hola|kya haal|kaise ho|who are you|sup|greetings)$/i.test(p) || p === 'hi' || p === 'hello') {
     return "Hey there! 🚀 I'm Aditya's live AI Assistant. Feel free to ask me anything about his IIT JEE 2028 prep, Olympiad Ranks (IOQM 2x, RMO 1x, NSEP 1x), 10th Board Marks (95.4% | 100/100 IT), or physics problem-solving!";
   }
-
-  // Academic Marks & Scores
   if (p.includes('mark') || p.includes('score') || p.includes('10th') || p.includes('percent') || p.includes('board') || p.includes('cbse') || p.includes('result')) {
     return "Aditya scored 95.4% overall in Class 10th CBSE Board Exams, featuring a perfect 100/100 score in Information Technology (IT)! 💯";
   }
-
-  // IIT JEE & Allen Patna Prep
   if (p.includes('allen') || p.includes('jee') || p.includes('patna') || p.includes('iit') || p.includes('study') || p.includes('coaching') || p.includes('prep') || p.includes('irodov')) {
     return "Aditya is preparing for IIT JEE 2028 at Allen Patna (Ashiyana Digha Branch), solving advanced physics from IE Irodov & PathFinder alongside olympiad-level mathematics!";
   }
-
-  // Olympiad Achievements
   if (p.includes('olympiad') || p.includes('ioqm') || p.includes('rmo') || p.includes('nsep') || p.includes('rank') || p.includes('math') || p.includes('physics')) {
     return "Aditya is a 2x IOQM (Stage 1 Maths Olympiad) qualifier, 1x RMO (Stage 2 Regional Maths Olympiad) qualifier, and 1x NSEP (National Standard Exam in Physics) qualifier! 🏆";
   }
-
-  // Mentors & Teachers
   if (p.includes('mentor') || p.includes('teacher') || p.includes('neha') || p.includes('ajit') || p.includes('guide')) {
     return "Key foundational mentors: Neha Mam (Maths) and Ajit Sir (Science), who guided his analytical foundation from Pioneer Academy & Samarthya Classes! 📚";
   }
-
-  // Ideologies & Worldview
   if (p.includes('ideolog') || p.includes('worldview') || p.includes('atheist') || p.includes('feminist') || p.includes('leftist') || p.includes('motto') || p.includes('believe')) {
     return "Worldview: Rational Atheist (empirical evidence over superstition), Feminist (gender equality & social justice), Leftist (secular progressivism). Personal motto: 'Inspired by no one.' 🧠";
   }
-
-  // Projects & Web Systems
   if (p.includes('project') || p.includes('skill') || p.includes('web') || p.includes('tech') || p.includes('code') || p.includes('build') || p.includes('react')) {
     return "Aditya builds ultra-modern neo-brutalist web systems, 60FPS background canvases, AI CLI agents, and real-time IP telemetry applications with React 19, Framer Motion, and Supabase! 💻";
   }
-
-  // Bio & Identity
   if (p.includes('who') || p.includes('about') || p.includes('bio') || p.includes('name') || p.includes('age')) {
     return "Aditya Prakash is a 15-year-old student & tech innovator from Patna, Bihar. He is an IIT JEE 2028 aspirant at Allen Patna, 2x IOQM qualifier, and 100/100 CBSE IT scorer! ⚡";
   }
-
-  // Dynamic Contextual Answer
   return `⚡ [NEMOTRON AI AGENT]: Regarding "${prompt}": Aditya is a 15-year-old IIT JEE 2028 aspirant at Allen Patna with 95.4% in 10th (100% in IT) and IOQM 2x / RMO 1x / NSEP 1x credentials. Feel free to ask about his physics, olympiads, or projects!`;
 }
+
+// Helper to fetch AI answer with realistic thinking delay & live OpenRouter LLM API
+async function fetchAiAnswer(prompt) {
+  const p = prompt.trim();
+  if (!p) return "Please enter a question!";
+
+  const apiKey = import.meta.env.VITE_NVIDIA_API_KEY || import.meta.env.VITE_AI_API_KEY || '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';
+
+  const systemInstruction = `You are the official high-IQ AI Nemotron Agent for Aditya Prakash (adityahere).
+Aditya is a 15-year-old IIT JEE 2028 aspirant studying at Allen Career Institute, Patna (Ashiyana Digha Branch).
+Key Credentials:
+- 95.4% overall in Class 10th CBSE with 100/100 Perfect Score in IT (Information Technology).
+- 2x IOQM Qualifier, 1x RMO Qualifier, 1x NSEP Qualifier.
+- Middle School Mentors: Neha Mam (Maths) & Ajit Sir (Science).
+- Worldview: Atheist, Feminist, Leftist. Motto: "Inspired by no one."
+Answer visitor queries with extreme intelligence, clarity, and neo-brutalist charm. Keep responses crisp (2-4 sentences max).`;
+
+  try {
+    if (apiKey) {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'openrouter/auto',
+          max_tokens: 250,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: p }
+          ]
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const msg = data.choices?.[0]?.message;
+        const liveText = msg?.content || msg?.reasoning || msg?.reasoning_details?.[0]?.summary;
+        if (liveText && liveText.trim()) {
+          return cleanMarkdownText(liveText.trim());
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Live OpenRouter API call error:", err);
+  }
+
+  return synthesizeDynamicFallback(p);
+}
+
 

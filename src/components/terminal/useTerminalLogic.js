@@ -152,25 +152,20 @@ Key Achievements:
 Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.`;
 
     try {
-      if (NVIDIA_API_KEY) {
-        const isOr = NVIDIA_API_KEY.startsWith('sk-or-');
+      const apiKey = NVIDIA_API_KEY || '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';
+      if (apiKey) {
+        const isOr = apiKey.startsWith('sk-or-');
         const url = isOr
           ? 'https://openrouter.ai/api/v1/chat/completions'
           : 'https://integrate.api.nvidia.com/v1/chat/completions';
 
         const headers = {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${NVIDIA_API_KEY}`
+          'Authorization': `Bearer ${apiKey}`
         };
 
         const openRouterModels = isOr
-          ? [
-              'meta-llama/llama-3.3-70b-instruct:free',
-              'google/gemini-2.0-flash-exp:free',
-              'mistralai/mistral-7b-instruct:free',
-              'openrouter/auto',
-              'nvidia/nemotron-4-340b-instruct'
-            ]
+          ? ['openrouter/auto', 'nvidia/nemotron-4-340b-instruct']
           : ['nvidia/nemotron-4-340b-instruct'];
 
         for (const modelCandidate of openRouterModels) {
@@ -184,14 +179,14 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
                   { role: 'system', content: systemInstruction },
                   { role: 'user', content: userPrompt }
                 ],
-                temperature: 0.88,
-                max_tokens: 450
+                max_tokens: 250
               })
             });
 
             if (resp.ok) {
               const data = await resp.json();
-              const text = data.choices?.[0]?.message?.content;
+              const msg = data.choices?.[0]?.message;
+              const text = msg?.content || msg?.reasoning || msg?.reasoning_details?.[0]?.summary;
               if (text && text.trim()) return cleanMarkdownText(text.trim());
             }
           } catch (e) {}
