@@ -115,13 +115,13 @@ export default function AdminVaultPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 font-mono"
+            className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 font-mono"
           >
             <motion.div
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-[#050505] border-3 border-[#00E5FF] w-full max-w-5xl max-h-[90vh] flex flex-col shadow-[8px_8px_0px_0px_#00E5FF] overflow-hidden"
+              className="bg-[#050505] border-3 border-[#00E5FF] w-full max-w-5xl max-h-[82vh] flex flex-col shadow-[8px_8px_0px_0px_#00E5FF] overflow-hidden"
             >
               {/* Header Bar */}
               <div className="bg-[#111111] border-b-2 border-[#00E5FF] p-3 flex flex-wrap items-center justify-between gap-2">
@@ -194,15 +194,17 @@ export default function AdminVaultPanel({
                             className="bg-black border border-neutral-800 p-3 hover:border-[#00E5FF] transition-colors space-y-2 font-mono"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-neutral-800 pb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="bg-[#00E5FF] text-black font-black px-2 py-0.5 text-[10px]">
+                              <div className="flex flex-wrap items-center gap-2 max-w-full overflow-hidden">
+                                <span className="bg-[#00E5FF] text-black font-black px-2 py-0.5 text-[10px] shrink-0">
                                   {devCode}
                                 </span>
-                                <span className="bg-[#39FF14] text-black font-black px-1.5 py-0.5 text-[10px]">
+                                <span className="bg-[#39FF14] text-black font-black px-1.5 py-0.5 text-[10px] shrink-0">
                                   📊 {visits} VISITS
                                 </span>
-                                <span className="font-bold text-white text-xs">IP: {s.ip}</span>
-                                <span className="text-[#39FF14] font-bold text-[11px]">📍 {s.location}</span>
+                                <span className="font-bold text-white text-xs shrink-0">IP: {s.ip}</span>
+                                <span className="text-[#39FF14] font-bold text-[11px] max-w-sm sm:max-w-md truncate shrink" title={s.location}>
+                                  📍 {s.location}
+                                </span>
                               </div>
 
                               <div className="flex items-center gap-2 text-[11px]">

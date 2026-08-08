@@ -668,21 +668,51 @@ export async function upgradeSessionWithGPSLocation() {
     const profiles = JSON.parse(storedLogs);
     const updated = profiles.map(p => {
       if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
-        const dualLoc = `${p.ipInfoLocation || p.location} | ${gps.locationString}`;
+        // Strip out existing concatenated GPS substrings to prevent repeated appending
+        let baseIpLoc = p.ipInfoLocation || p.location || '📡 IP Net: Local';
+        if (baseIpLoc.includes(' | 🎯')) {
+          baseIpLoc = baseIpLoc.split(' | 🎯')[0];
+        }
+        if (baseIpLoc.includes(' (🎯 GPS')) {
+          baseIpLoc = baseIpLoc.split(' (🎯 GPS')[0];
+        }
+
+        const cleanGpsLoc = gps.locationString;
+        const dualLoc = `${baseIpLoc} | ${cleanGpsLoc}`;
+
+        // Only add activity log once if not already present
+        const prevActivities = Array.isArray(p.activities) ? p.activities : [];
+        const hasLoggedGps = prevActivities.some(a => a.includes('GPS Resolved'));
+        const newActivities = !hasLoggedGps
+          ? [...prevActivities, `🎯 GPS Resolved: ${cleanGpsLoc}`].slice(-100)
+          : prevActivities;
+
         return {
           ...p,
-          gpsLocation: gps.locationString,
+          ipInfoLocation: baseIpLoc,
+          gpsLocation: cleanGpsLoc,
           location: dualLoc,
           isGpsExact: true,
-          activities: Array.isArray(p.activities)
-            ? [...p.activities, `🎯 GPS Resolved: ${gps.locationString}`].slice(-100)
-            : [`🎯 GPS Resolved: ${gps.locationString}`]
+          activities: newActivities
         };
       }
       return p;
     });
 
-    localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
+    // Auto-clean any already duplicated location strings in existing profiles
+    const cleanedProfiles = updated.map(p => {
+      if (typeof p.location === 'string' && p.location.indexOf('(🎯 GPS Exact)') !== p.location.lastIndexOf('(🎯 GPS Exact)')) {
+        const parts = p.location.split('|').map(s => s.trim());
+        const uniqueParts = Array.from(new Set(parts));
+        return {
+          ...p,
+          location: uniqueParts.join(' | ')
+        };
+      }
+      return p;
+    });
+
+    localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(cleanedProfiles));
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -852,6 +882,16 @@ export async function logVisitorActivity(activityDescription) {
 }
 
 export async function fetchRealVisitorSessions() {
+  const sanitizeLocation = (loc) => {
+    if (typeof loc !== 'string') return '📡 IP Net: Local';
+    if (loc.indexOf('(🎯 GPS Exact)') !== loc.lastIndexOf('(🎯 GPS Exact)')) {
+      const parts = loc.split('|').map(s => s.trim());
+      const unique = Array.from(new Set(parts));
+      return unique.join(' | ');
+    }
+    return loc;
+  };
+
   // 1. Try Supabase (Capacity 100)
   if (isSupabaseConfigured && supabase) {
     try {
@@ -860,14 +900,25 @@ export async function fetchRealVisitorSessions() {
         .select('*')
         .order('lastSeen', { ascending: false })
         .limit(100);
-      if (!error && data && data.length > 0) return data;
+      if (!error && data && data.length > 0) {
+        return data.map(s => ({
+          ...s,
+          location: sanitizeLocation(s.location)
+        }));
+      }
     } catch (e) {}
   }
 
   // 2. LocalStorage Fallback
   try {
     const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const raw = JSON.parse(stored);
+      return raw.map(s => ({
+        ...s,
+        location: sanitizeLocation(s.location)
+      }));
+    }
   } catch (e) {}
 
   return [];
