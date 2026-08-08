@@ -759,6 +759,11 @@ export async function upgradeSessionWithGPSLocation() {
       if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
         const cleanGpsLoc = gps.locationString;
 
+        const prevLocs = Array.isArray(p.locationsHistory)
+          ? p.locationsHistory
+          : (p.location ? [sanitizeLocation(p.location)] : []);
+        const updatedLocs = Array.from(new Set([cleanGpsLoc, ...prevLocs])).filter(Boolean).slice(0, 20);
+
         const prevActivities = Array.isArray(p.activities) ? p.activities : [];
         const hasLoggedGps = prevActivities.some(a => a.includes('GPS Resolved'));
         const newActivities = !hasLoggedGps
@@ -770,6 +775,7 @@ export async function upgradeSessionWithGPSLocation() {
           ipInfoLocation: p.ipInfoLocation || p.location,
           gpsLocation: cleanGpsLoc,
           location: cleanGpsLoc,
+          locationsHistory: updatedLocs,
           isGpsExact: true,
           activities: newActivities
         };
@@ -838,17 +844,24 @@ export async function recordRealVisitorSession() {
     let profileRecord;
 
     if (targetIndex !== -1) {
-      // Returning device: Accumulate visit count and append new session start log without deleting previous logs
+      // Returning device: Accumulate visit count, update locations history and append new session start log
       const prev = existingProfiles[targetIndex];
       const prevVisits = (prev.visitCount || 1) + 1;
       const prevActivities = Array.isArray(prev.activities) ? prev.activities : [];
       const updatedActivities = [...prevActivities, initialActivity].slice(-100);
 
+      const currentLoc = sanitizeLocation(geo.location);
+      const prevLocs = Array.isArray(prev.locationsHistory)
+        ? prev.locationsHistory
+        : (prev.location ? [sanitizeLocation(prev.location)] : []);
+      const updatedLocs = Array.from(new Set([currentLoc, ...prevLocs])).filter(Boolean).slice(0, 20);
+
       profileRecord = {
         ...prev,
         deviceId,
         ip: geo.ip,
-        location: sanitizeLocation(prev.location || geo.location),
+        location: currentLoc || sanitizeLocation(prev.location),
+        locationsHistory: updatedLocs,
         device: geo.device,
         isp: geo.org,
         lastSeen: nowIso,
@@ -862,11 +875,13 @@ export async function recordRealVisitorSession() {
       existingProfiles[targetIndex] = profileRecord;
     } else {
       // New device first visit profile
+      const currentLoc = sanitizeLocation(geo.location);
       profileRecord = {
         id: sessionId,
         deviceId,
         ip: geo.ip,
-        location: sanitizeLocation(geo.location),
+        location: currentLoc,
+        locationsHistory: [currentLoc],
         city: geo.city,
         country: geo.country,
         isp: geo.org,

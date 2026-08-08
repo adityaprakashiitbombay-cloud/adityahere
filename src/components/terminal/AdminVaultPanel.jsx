@@ -163,16 +163,54 @@ export default function AdminVaultPanel({
                 </div>
               </div>
 
-              {/* Search & Filter Bar */}
-              <div className="p-3 bg-black border-b border-neutral-800 flex items-center gap-2">
-                <Search className="w-4 h-4 text-[#00E5FF]" />
-                <input
-                  type="text"
-                  placeholder="Filter by IP, location, device or ISP..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-black border border-neutral-700 p-1.5 text-xs text-white w-full focus:outline-none focus:border-[#00E5FF]"
-                />
+              {/* Search & Summary Stats Bar */}
+              <div className="p-3 bg-black border-b border-neutral-800 space-y-2">
+                {/* HUD Summary Stats Bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                  <div className="bg-[#111111] border border-neutral-800 p-2 flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-[#00E5FF]" />
+                    <div>
+                      <div className="text-[10px] text-neutral-400 font-bold uppercase">Devices</div>
+                      <div className="text-sm font-black text-white">{sessions.length} TRACKED</div>
+                    </div>
+                  </div>
+                  <div className="bg-[#111111] border border-neutral-800 p-2 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-[#39FF14]" />
+                    <div>
+                      <div className="text-[10px] text-neutral-400 font-bold uppercase">Total Visits</div>
+                      <div className="text-sm font-black text-[#39FF14]">
+                        {sessions.reduce((acc, curr) => acc + (curr.visitCount || 1), 0)} SESSIONS
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-[#111111] border border-neutral-800 p-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#FFE600]" />
+                    <div>
+                      <div className="text-[10px] text-neutral-400 font-bold uppercase">Cumul. Dwell</div>
+                      <div className="text-sm font-black text-[#FFE600]">
+                        {formatDuration(sessions.reduce((acc, curr) => acc + (curr.totalDwellSeconds || curr.duration_seconds || 1), 0))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-[#111111] border border-neutral-800 p-2 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-[#FF0055]" />
+                    <div>
+                      <div className="text-[10px] text-neutral-400 font-bold uppercase">Filtered</div>
+                      <div className="text-sm font-black text-[#FF0055]">{filteredSessions.length} MATCHES</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Search className="w-4 h-4 text-[#00E5FF]" />
+                  <input
+                    type="text"
+                    placeholder="Search by Device ID, IP, location history, ISP or activity logs..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="bg-[#050505] border border-neutral-700 p-2 text-xs text-white w-full focus:outline-none focus:border-[#00E5FF]"
+                  />
+                </div>
               </div>
 
               {/* Scrollable Visitor Sessions Table */}
@@ -190,11 +228,17 @@ export default function AdminVaultPanel({
                         const firstSeen = s.firstSeen ? new Date(s.firstSeen).toLocaleString() : new Date(s.timestamp || Date.now()).toLocaleString();
                         const lastActive = s.lastSeen ? new Date(s.lastSeen).toLocaleString() : 'Just now';
 
+                        // Multi-Location History Array
+                        const locHistory = Array.isArray(s.locationsHistory) && s.locationsHistory.length > 0
+                          ? s.locationsHistory
+                          : [s.location];
+
                         return (
                           <div
                             key={s.id || idx}
-                            className="bg-black border border-neutral-800 p-3 hover:border-[#00E5FF] transition-colors space-y-2 font-mono"
+                            className="bg-black border border-neutral-800 p-3 hover:border-[#00E5FF] transition-colors space-y-2.5 font-mono"
                           >
+                            {/* Device & Location Header */}
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-neutral-800 pb-2">
                               <div className="flex flex-wrap items-center gap-2 max-w-full overflow-hidden">
                                 <span className="bg-[#00E5FF] text-black font-black px-2 py-0.5 text-[10px] shrink-0">
@@ -205,13 +249,13 @@ export default function AdminVaultPanel({
                                 </span>
                                 <span className="font-bold text-white text-xs shrink-0">IP: {s.ip}</span>
                                 <span className="text-[#39FF14] font-bold text-[11px] max-w-sm sm:max-w-md truncate shrink" title={s.location}>
-                                  📍 {s.location}
+                                  📍 ACTIVE: {s.location}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2 text-[11px]">
                                 <span className="bg-[#111] border border-[#FFE600] px-2 py-0.5 text-[#FFE600] font-bold flex items-center gap-1">
-                                  <Clock className="w-3 h-3 text-[#FFE600]" /> CUMULATIVE DWELL: {dwellStr}
+                                  <Clock className="w-3 h-3 text-[#FFE600]" /> DWELL: {dwellStr}
                                 </span>
                                 <span className="bg-[#111] border border-[#00E5FF] px-2 py-0.5 text-[#00E5FF] font-bold">
                                   ⚡ {tasks} TASKS
@@ -219,7 +263,28 @@ export default function AdminVaultPanel({
                               </div>
                             </div>
 
-                            {/* Device, Network & Time History Details */}
+                            {/* Multi-Location History Bar */}
+                            <div className="bg-[#0c0c0c] border border-neutral-900 p-2 text-[10px] space-y-1">
+                              <div className="text-[#00E5FF] font-bold uppercase tracking-wider flex items-center gap-1">
+                                🌍 ALL VISITED LOCATIONS FOR THIS DEVICE ({locHistory.length}):
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {locHistory.map((locItem, locIdx) => (
+                                  <span
+                                    key={locIdx}
+                                    className={`px-2 py-0.5 text-[10px] font-bold border ${
+                                      locItem.includes('GPS Exact')
+                                        ? 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]'
+                                        : 'bg-[#111111] text-neutral-300 border-neutral-800'
+                                    }`}
+                                  >
+                                    📍 {locItem}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Device Hardware, Network & Time History Details */}
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-400 border-b border-neutral-900 pb-1.5">
                               <div className="flex items-center gap-3">
                                 <span>📱 Device: <strong className="text-white">{s.device}</strong></span>
@@ -234,7 +299,7 @@ export default function AdminVaultPanel({
                             {/* Real-time Interaction Activity Trail */}
                             <div className="bg-[#090909] border border-neutral-900 p-2 text-[11px] space-y-1">
                               <div className="text-[10px] text-[#00E5FF] font-bold flex items-center gap-1 uppercase tracking-wider">
-                                <Activity className="w-3 h-3 text-[#00E5FF]" /> MULTI-SESSION DEVICE TASK & ACTIVITY TRAIL ({Array.isArray(s.activities) ? s.activities.length : 0} logs):
+                                <Activity className="w-3 h-3 text-[#00E5FF]" /> DEVICE ACTIVITY LOGS ({Array.isArray(s.activities) ? s.activities.length : 0}):
                               </div>
                               <div className="flex flex-wrap items-center gap-1.5 max-h-36 overflow-y-auto">
                                 {Array.isArray(s.activities) && s.activities.length > 0 ? (
