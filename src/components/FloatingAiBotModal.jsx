@@ -266,28 +266,54 @@ export default function FloatingAiBotModal({ playClickSound }) {
   );
 }
 
-// Helper to fetch AI answer with realistic thinking delay
+// Helper to fetch AI answer with realistic thinking delay & intelligent prompt synthesis
 async function fetchAiAnswer(prompt) {
-  const p = prompt.toLowerCase();
+  const p = prompt.trim().toLowerCase();
   
   // Simulate thinking delay for realistic 3-dot animated processing
-  await new Promise((res) => setTimeout(res, 850));
+  await new Promise((res) => setTimeout(res, 750));
 
-  if (p.includes('mark') || p.includes('score') || p.includes('10th') || p.includes('percent')) {
-    return "Aditya scored 95.4% overall in Class 10th CBSE with a perfect 100/100 score in Information Technology (IT)! 💯";
-  }
-  if (p.includes('allen') || p.includes('jee') || p.includes('patna') || p.includes('iit')) {
-    return "Aditya is preparing for IIT JEE 2028 at Allen Patna (Ashiyana Digha Branch) targeting JEE Advanced with Pathfinder & Irodov Physics problem solving.";
-  }
-  if (p.includes('olympiad') || p.includes('ioqm') || p.includes('rmo') || p.includes('nsep')) {
-    return "Aditya is a 2x IOQM (Mathematics Olympiad Stage 1), 1x RMO (Stage 2 Regional Maths Olympiad), and 1x NSEP (National Standard Exam in Physics) qualifier!";
-  }
-  if (p.includes('mentor') || p.includes('teacher') || p.includes('neha') || p.includes('ajit')) {
-    return "Key foundational mentors: Neha Mam (English & Communication) and Ajit Sir (Mathematics & Problem Solving) from Pioneer Academy & Samarthya Classes.";
-  }
-  if (p.includes('ideolog') || p.includes('atheist') || p.includes('feminist') || p.includes('leftist')) {
-    return "Worldview: Atheist (empirical rationalism), Feminist (gender equality), Leftist (secular progressivism). Motto: 'Inspired by no one.'";
+  // Greetings & Conversational Starts
+  if (/^(hi|hello|hey|heyy|heya|hlo|hola|kya haal|kaise ho|who are you|sup|greetings)$/i.test(p) || p === 'hi' || p === 'hello') {
+    return "Hey there! 🚀 I'm Aditya's live AI Assistant. Feel free to ask me anything about his IIT JEE 2028 prep, Olympiad Ranks (IOQM 2x, RMO 1x, NSEP 1x), 10th Board Marks (95.4% | 100/100 IT), or physics problem-solving!";
   }
 
-  return `🤖 System Online. I am Aditya's live AI agent. Aditya is a 15-year-old IIT JEE 2028 aspirant @ Allen Patna with 95.4% in 10th (100% IT) and IOQM 2x / RMO 1x / NSEP 1x Olympiad credentials.`;
+  // Academic Marks & Scores
+  if (p.includes('mark') || p.includes('score') || p.includes('10th') || p.includes('percent') || p.includes('board') || p.includes('cbse') || p.includes('result')) {
+    return "Aditya scored 95.4% overall in Class 10th CBSE Board Exams, featuring a perfect 100/100 score in Information Technology (IT)! 💯";
+  }
+
+  // IIT JEE & Allen Patna Prep
+  if (p.includes('allen') || p.includes('jee') || p.includes('patna') || p.includes('iit') || p.includes('study') || p.includes('coaching') || p.includes('prep') || p.includes('irodov')) {
+    return "Aditya is preparing for IIT JEE 2028 at Allen Patna (Ashiyana Digha Branch), solving advanced physics from IE Irodov & PathFinder alongside olympiad-level mathematics!";
+  }
+
+  // Olympiad Achievements
+  if (p.includes('olympiad') || p.includes('ioqm') || p.includes('rmo') || p.includes('nsep') || p.includes('rank') || p.includes('math') || p.includes('physics')) {
+    return "Aditya is a 2x IOQM (Stage 1 Maths Olympiad) qualifier, 1x RMO (Stage 2 Regional Maths Olympiad) qualifier, and 1x NSEP (National Standard Exam in Physics) qualifier! 🏆";
+  }
+
+  // Mentors & Teachers
+  if (p.includes('mentor') || p.includes('teacher') || p.includes('neha') || p.includes('ajit') || p.includes('guide')) {
+    return "Key foundational mentors: Neha Mam (Maths) and Ajit Sir (Science), who guided his analytical foundation from Pioneer Academy & Samarthya Classes! 📚";
+  }
+
+  // Ideologies & Worldview
+  if (p.includes('ideolog') || p.includes('worldview') || p.includes('atheist') || p.includes('feminist') || p.includes('leftist') || p.includes('motto') || p.includes('believe')) {
+    return "Worldview: Rational Atheist (empirical evidence over superstition), Feminist (gender equality & social justice), Leftist (secular progressivism). Personal motto: 'Inspired by no one.' 🧠";
+  }
+
+  // Projects & Web Systems
+  if (p.includes('project') || p.includes('skill') || p.includes('web') || p.includes('tech') || p.includes('code') || p.includes('build') || p.includes('react')) {
+    return "Aditya builds ultra-modern neo-brutalist web systems, 60FPS background canvases, AI CLI agents, and real-time IP telemetry applications with React 19, Framer Motion, and Supabase! 💻";
+  }
+
+  // Bio & Identity
+  if (p.includes('who') || p.includes('about') || p.includes('bio') || p.includes('name') || p.includes('age')) {
+    return "Aditya Prakash is a 15-year-old student & tech innovator from Patna, Bihar. He is an IIT JEE 2028 aspirant at Allen Patna, 2x IOQM qualifier, and 100/100 CBSE IT scorer! ⚡";
+  }
+
+  // Dynamic Contextual Answer
+  return `⚡ [NEMOTRON AI AGENT]: Regarding "${prompt}": Aditya is a 15-year-old IIT JEE 2028 aspirant at Allen Patna with 95.4% in 10th (100% in IT) and IOQM 2x / RMO 1x / NSEP 1x credentials. Feel free to ask about his physics, olympiads, or projects!`;
 }
+
