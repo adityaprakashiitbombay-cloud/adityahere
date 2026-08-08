@@ -180,58 +180,76 @@ export default function AdminVaultPanel({
                     No matching visitor sessions recorded yet.
                   </div>
                 ) : (
-                  filteredSessions.map((s, idx) => (
-                    <div
-                      key={s.id || idx}
-                      className="bg-black border border-neutral-800 p-3 hover:border-[#00E5FF] transition-colors space-y-2"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-neutral-800 pb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-[#00E5FF] text-black font-black px-2 py-0.5 text-[10px]">
-                            #{sessions.length - idx}
-                          </span>
-                          <span className="font-bold text-white text-xs">IP: {s.ip}</span>
-                          <span className="text-[#39FF14] font-bold text-[11px]">📍 {s.location}</span>
-                        </div>
+                      {filteredSessions.map((s, idx) => {
+                        const devCode = s.deviceId || `DEV-${s.id?.slice(-6) || 'LOCAL'}`;
+                        const visits = s.visitCount || 1;
+                        const tasks = s.totalActionsCount || (Array.isArray(s.activities) ? s.activities.length : 1);
+                        const dwellStr = formatDuration(s.totalDwellSeconds || s.duration_seconds || 1);
+                        const firstSeen = s.firstSeen ? new Date(s.firstSeen).toLocaleString() : new Date(s.timestamp || Date.now()).toLocaleString();
+                        const lastActive = s.lastSeen ? new Date(s.lastSeen).toLocaleString() : 'Just now';
 
-                        <div className="flex items-center gap-3 text-[11px]">
-                          <span className="bg-[#111] border border-neutral-700 px-2 py-0.5 text-[#FFE600] font-bold flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-[#FFE600]" /> DWELL: {formatDuration(s.duration_seconds || 1)}
-                          </span>
-                          <span className="text-neutral-400 text-[10px]">
-                            {new Date(s.timestamp).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
+                        return (
+                          <div
+                            key={s.id || idx}
+                            className="bg-black border border-neutral-800 p-3 hover:border-[#00E5FF] transition-colors space-y-2 font-mono"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-neutral-800 pb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="bg-[#00E5FF] text-black font-black px-2 py-0.5 text-[10px]">
+                                  {devCode}
+                                </span>
+                                <span className="bg-[#39FF14] text-black font-black px-1.5 py-0.5 text-[10px]">
+                                  📊 {visits} VISITS
+                                </span>
+                                <span className="font-bold text-white text-xs">IP: {s.ip}</span>
+                                <span className="text-[#39FF14] font-bold text-[11px]">📍 {s.location}</span>
+                              </div>
 
-                      {/* Device & Network Details */}
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-400">
-                        <span>📱 Device: <strong className="text-white">{s.device}</strong></span>
-                        <span>⚡ Network / ISP: <strong className="text-white">{s.isp || 'Telecom'}</strong></span>
-                      </div>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <span className="bg-[#111] border border-[#FFE600] px-2 py-0.5 text-[#FFE600] font-bold flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-[#FFE600]" /> CUMULATIVE DWELL: {dwellStr}
+                                </span>
+                                <span className="bg-[#111] border border-[#00E5FF] px-2 py-0.5 text-[#00E5FF] font-bold">
+                                  ⚡ {tasks} TASKS
+                                </span>
+                              </div>
+                            </div>
 
-                      {/* Real-time Interaction Activity Trail */}
-                      <div className="bg-[#090909] border border-neutral-900 p-2 text-[11px] space-y-1">
-                        <div className="text-[10px] text-[#00E5FF] font-bold flex items-center gap-1 uppercase tracking-wider">
-                          <Activity className="w-3 h-3 text-[#00E5FF]" /> VISITOR INTERACTION ACTIVITY TRAIL:
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {Array.isArray(s.activities) && s.activities.length > 0 ? (
-                            s.activities.map((act, actIdx) => (
-                              <span
-                                key={actIdx}
-                                className="bg-[#111111] border border-neutral-800 px-2 py-0.5 text-[10px] text-neutral-300 font-mono"
-                              >
-                                {act}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-neutral-500 italic text-[10px]">📍 Active session on page</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                            {/* Device, Network & Time History Details */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-400 border-b border-neutral-900 pb-1.5">
+                              <div className="flex items-center gap-3">
+                                <span>📱 Device: <strong className="text-white">{s.device}</strong></span>
+                                <span>⚡ ISP: <strong className="text-white">{s.isp || 'Telecom Net'}</strong></span>
+                              </div>
+                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                                <span>🗓️ First Seen: <strong className="text-neutral-300">{firstSeen}</strong></span>
+                                <span>🕒 Last Active: <strong className="text-[#39FF14]">{lastActive}</strong></span>
+                              </div>
+                            </div>
+
+                            {/* Real-time Interaction Activity Trail */}
+                            <div className="bg-[#090909] border border-neutral-900 p-2 text-[11px] space-y-1">
+                              <div className="text-[10px] text-[#00E5FF] font-bold flex items-center gap-1 uppercase tracking-wider">
+                                <Activity className="w-3 h-3 text-[#00E5FF]" /> MULTI-SESSION DEVICE TASK & ACTIVITY TRAIL ({Array.isArray(s.activities) ? s.activities.length : 0} logs):
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5 max-h-36 overflow-y-auto">
+                                {Array.isArray(s.activities) && s.activities.length > 0 ? (
+                                  s.activities.map((act, actIdx) => (
+                                    <span
+                                      key={actIdx}
+                                      className="bg-[#111111] border border-neutral-800 px-2 py-0.5 text-[10px] text-neutral-300 font-mono"
+                                    >
+                                      {act}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-neutral-500 italic text-[10px]">📍 Active session on page</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                 )}
               </div>
             </motion.div>

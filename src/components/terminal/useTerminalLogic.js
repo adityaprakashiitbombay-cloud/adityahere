@@ -36,7 +36,7 @@ function isFastLocalCommand(q) {
   if (!q) return false;
   const qLower = q.trim().toLowerCase();
   const fastCmds = [
-    'alpha1845', 'alpha', 'help', 'visitors', 'analytics', 'ips',
+    'alpha1845', 'help', 'visitors', 'analytics', 'ips',
     'clearvisitors', 'messages', 'private', 'dm', 'chats', 'aichats',
     'logs', 'clearchats', 'clear', 'edit', 'lock', 'nvidia', 'nemotron',
     'fed', 'clearfed', 'theme'
@@ -244,7 +244,7 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
 
     logVisitorActivity(`CLI: ${q.slice(0, 30)}`);
 
-    if (q === 'ALPHA1845' || qLower === 'alpha1845' || qLower === 'alpha') {
+    if (q === 'ALPHA1845' || qLower === 'alpha1845') {
       setIsAdminUnlocked(true);
       localStorage.setItem('adityahere_admin_unlocked', 'true');
       window.dispatchEvent(new Event('adminAuthChanged'));
@@ -254,7 +254,7 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
 Welcome back, Aditya! Admin Matrix & Server CMS is now ACTIVE.
 
 AVAILABLE ADMIN COMMANDS & SHORTCUTS:
-• visitors     : Read real live visitor IPs, location, dwell time & activity trail table
+• visitors     : Read real live visitor IPs, device codes, dwell time & audit trail
 • clearvisitors: Purge real visitor sessions table
 • messages     : Read all private visitor direct messages
 • chats        : Read all visitor AI chatbot transcripts
@@ -277,16 +277,25 @@ AVAILABLE ADMIN COMMANDS & SHORTCUTS:
       if (!sessions || sessions.length === 0) {
         return '🌐 REAL VISITORS TABLE: No visitor sessions recorded yet.';
       }
-      return `🌐 REAL LIVE VISITORS TELEMETRY TABLE (${sessions.length}/100 recorded sessions):\n----------------------------------------------------\n` +
+      return `🌐 REAL LIVE VISITORS AUDIT TRAIL TABLE (${sessions.length} Unique Devices Recorded):\n----------------------------------------------------\n` +
         sessions.map((s, i) => {
-          const acts = Array.isArray(s.activities) && s.activities.length > 0 ? s.activities.join(' ➔ ') : '📍 Active Session';
-          const dwell = formatDuration(s.duration_seconds || 1);
-          return `${i + 1}. [IP: ${s.ip} | ${s.location}]
-   • Device: ${s.device} | Network: ${s.isp || 'ISP Net'}
-   • Entry: ${new Date(s.timestamp).toLocaleString()} | Dwell Time: ⏱️ ${dwell}
-   • Activity: ${acts}`;
+          const devCode = s.deviceId || `DEV-${s.id?.slice(-6) || 'LOCAL'}`;
+          const visits = s.visitCount || 1;
+          const acts = Array.isArray(s.activities) && s.activities.length > 0 ? s.activities.slice(-5).join(' ➔ ') : '📍 Active Session';
+          const dwell = formatDuration(s.totalDwellSeconds || s.duration_seconds || 1);
+          const firstSeenStr = s.firstSeen ? new Date(s.firstSeen).toLocaleString() : new Date(s.timestamp || Date.now()).toLocaleString();
+          const lastActiveStr = s.lastSeen ? new Date(s.lastSeen).toLocaleString() : 'Just now';
+          const tasks = s.totalActionsCount || (Array.isArray(s.activities) ? s.activities.length : 1);
+
+          return `${i + 1}. [DEVICE CODE: ${devCode} | IP: ${s.ip} | ${s.location}]
+   • Visits Count: 📊 ${visits} visit(s) | Total Tasks/Actions: ⚡ ${tasks} tasks
+   • Device/Network: ${s.device} (${s.isp || 'ISP Net'})
+   • First Seen: 🗓️ ${firstSeenStr} | Last Active: 🕒 ${lastActiveStr}
+   • Cumulative Dwell Time: ⏱️ ${dwell}
+   • Recent Activity Trail: ${acts}`;
         }).join('\n\n');
     }
+
 
     if (qLower === 'clearvisitors') {
       if (!isAdminUnlocked && localStorage.getItem('adityahere_admin_unlocked') !== 'true') {
