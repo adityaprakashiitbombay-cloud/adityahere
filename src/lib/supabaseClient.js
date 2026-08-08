@@ -804,8 +804,7 @@ export async function upgradeSessionWithGPSLocation() {
     return null;
   }
 }
-    return null;
-  }
+
 export function sanitizeLocation(loc) {
   if (!loc || typeof loc !== 'string') return '📡 IP Net: Local';
   if (loc.includes('GPS Exact')) {
