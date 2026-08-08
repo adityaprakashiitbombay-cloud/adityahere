@@ -500,39 +500,41 @@ export function getOrCreateVisitorDeviceId() {
 }
 
 export async function reverseGeocodeCoords(latitude, longitude) {
+  // 1. Primary: OpenStreetMap Nominatim High-Resolution (zoom=18 for exact street, landmark & colony)
+  try {
+    const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`;
+    const res = await fetch(nomUrl, { headers: { 'User-Agent': 'AdityaProfile/2.0' } });
+    if (res.ok) {
+      const data = await res.json();
+      const a = data.address || {};
+      const landmark = a.amenity || a.building || a.shop || a.suburb || a.neighbourhood || a.road || a.city_district || a.subdistrict || '';
+      const city = a.city || a.town || a.village || a.county || '';
+      const state = a.state || a.country || '';
+      const parts = Array.from(new Set([landmark, city, state].filter(Boolean)));
+      if (parts.length > 0) {
+        return `${parts.join(', ')} (🎯 GPS Exact)`;
+      }
+    }
+  } catch (e) {}
+
+  // 2. Fallback: BigDataCloud Reverse Geocoding
   try {
     const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
+      const adminList = data.localityInfo?.administrative || [];
+      const adminNames = adminList.map(a => a.name).filter(n => n && !n.includes('India'));
       const locality = data.locality || data.localityInfo?.informative?.[0]?.name || '';
       const city = data.city || data.principalSubdivision || '';
-      const country = data.countryName || '';
-      const parts = Array.from(new Set([locality, city, country].filter(Boolean)));
+      const parts = Array.from(new Set([locality, ...adminNames, city, data.countryName].filter(Boolean)));
       if (parts.length > 0) {
-        return parts.join(', ') + ' (🎯 GPS Exact)';
-      }
-    }
-  } catch (e) {
-    console.warn('Reverse geocode fetch error:', e);
-  }
-
-  // Backup reverse geocoding via OpenStreetMap Nominatim
-  try {
-    const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`;
-    const res = await fetch(nomUrl, { headers: { 'User-Agent': 'AdityaProfile/2.0' } });
-    if (res.ok) {
-      const data = await res.json();
-      const addr = data.address;
-      if (addr) {
-        const place = addr.suburb || addr.neighbourhood || addr.city_district || addr.city || addr.town || addr.village;
-        const state = addr.state || addr.country;
-        if (place) return `${place}, ${state} (🎯 GPS Exact)`;
+        return `${parts.join(', ')} (🎯 GPS Exact)`;
       }
     }
   } catch (e) {}
 
-  return null;
+  return `${latitude.toFixed(4)}°, ${longitude.toFixed(4)}° (🎯 GPS Coords)`;
 }
 
 export function requestExactGPSLocation() {
