@@ -21,15 +21,16 @@ export async function fetchLivePortfolioData() {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
-        .from('portfolio_data')
+        .from('comments')
         .select('*')
-        .eq('id', PORTFOLIO_DOC_ID)
-        .single();
+        .eq('role', 'SYS_PORTFOLIO_DATA')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (!error && data && data.payload) {
-        // Cache to local storage for instant offline / fallback rendering
-        localStorage.setItem(LIVE_PORTFOLIO_STORAGE_KEY, JSON.stringify(data.payload));
-        return data.payload;
+      if (!error && data && data.length > 0 && data[0].message) {
+        const payload = JSON.parse(data[0].message);
+        localStorage.setItem(LIVE_PORTFOLIO_STORAGE_KEY, JSON.stringify(payload));
+        return payload;
       }
     } catch (e) {
       console.warn('Supabase portfolio fetch failed, checking local storage', e);
@@ -67,20 +68,27 @@ export async function saveLivePortfolioData(updatedData) {
   // 3. Persist to Supabase backend table
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
-        .from('portfolio_data')
-        .upsert([
-          {
-            id: PORTFOLIO_DOC_ID,
-            payload: updatedData,
-            updated_at: new Date().toISOString()
-          }
-        ]);
+      const jsonPayload = JSON.stringify(updatedData);
+      const { data: existing } = await supabase
+        .from('comments')
+        .select('id')
+        .eq('role', 'SYS_PORTFOLIO_DATA')
+        .limit(1);
 
-      if (error) {
-        console.warn('Supabase portfolio upsert warning:', error.message);
-        return { success: true, mode: 'local_cached', warning: error.message };
+      if (existing && existing.length > 0) {
+        await supabase.from('comments').update({
+          message: jsonPayload,
+          created_at: new Date().toISOString()
+        }).eq('id', existing[0].id);
+      } else {
+        await supabase.from('comments').insert([{
+          name: 'PORTFOLIO_DATA',
+          role: 'SYS_PORTFOLIO_DATA',
+          message: jsonPayload,
+          stars: 5
+        }]);
       }
+
       return { success: true, mode: 'supabase_synced' };
     } catch (e) {
       console.warn('Supabase save exception:', e);
@@ -142,7 +150,8 @@ export async function fetchVisitorComments() {
         .order('created_at', { ascending: false });
       
       if (!error && data) {
-        return data;
+        // Filter out system rows
+        return data.filter(c => !c.role || !c.role.startsWith('SYS_'));
       }
     } catch (e) {
       console.warn('Supabase fetch failed, using local storage fallback', e);
@@ -253,6 +262,22 @@ const initialPrivateMsgs = [
 ];
 
 export async function fetchPrivateMessages() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('private_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map(m => ({
+          ...m,
+          contactInfo: m.contact_info || m.contactInfo || 'Not Provided'
+        }));
+      }
+    } catch (e) {}
+  }
+
   try {
     const cached = localStorage.getItem(PRIVATE_MSG_STORAGE_KEY);
     if (cached) {
@@ -268,24 +293,43 @@ export async function fetchPrivateMessages() {
 
 export async function submitPrivateMessage({ name, contactInfo, message }) {
   const newMsg = {
-    id: 'pm_' + Date.now(),
     name: name || 'Anonymous Visitor',
-    contactInfo: contactInfo || 'Not Provided',
+    contact_info: contactInfo || 'Not Provided',
     message: message || '',
     created_at: new Date().toISOString()
   };
 
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('private_messages')
+        .insert([newMsg])
+        .select();
+
+      if (!error && data && data.length > 0) {
+        return { success: true, data: data[0], mode: 'supabase' };
+      }
+    } catch (e) {}
+  }
+
   try {
     const existing = await fetchPrivateMessages();
-    const updated = [newMsg, ...existing];
+    const msgWithId = { ...newMsg, id: 'pm_' + Date.now(), contactInfo };
+    const updated = [msgWithId, ...existing];
     localStorage.setItem(PRIVATE_MSG_STORAGE_KEY, JSON.stringify(updated));
-    return { success: true, data: newMsg };
+    return { success: true, data: msgWithId };
   } catch (e) {
     return { success: false, error: e.message };
   }
 }
 
 export async function deletePrivateMessage(id) {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('private_messages').delete().eq('id', id);
+    } catch (e) {}
+  }
+
   try {
     const existing = await fetchPrivateMessages();
     const filtered = existing.filter((m) => m.id !== id);
@@ -301,35 +345,36 @@ export async function deletePrivateMessage(id) {
 // ----------------------------------------------------
 const AI_CHAT_STORAGE_KEY = 'adityahere_ai_chat_vault_v1';
 
-const initialDefaultAiChats = [
-  {
-    id: 'chat_init_1',
-    userPrompt: 'What is your Class 10th score and IT marks?',
-    aiResponse: 'Scored 95.4% overall in Class 10th CBSE with a perfect 100/100 score in Information Technology (IT)! 💯',
-    model: 'NVIDIA Nemotron 4-340B',
-    source: 'Home Widget',
-    timestamp: new Date(Date.now() - 3600000 * 8).toISOString()
-  },
-  {
-    id: 'chat_init_2',
-    userPrompt: 'Tell me about IOQM and RMO Olympiads',
-    aiResponse: 'Aditya is a 2x IOQM (Indian Olympiad Qualifier in Mathematics) and 1x RMO (Regional Mathematical Olympiad) qualifier, along with 1x NSEP in Physics!',
-    model: 'NVIDIA Nemotron 4-340B',
-    source: 'Terminal CLI',
-    timestamp: new Date(Date.now() - 3600000 * 2).toISOString()
-  }
-];
-
 export async function fetchAiChatLogs() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('role', 'SYS_AI_LOG')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!error && data && data.length > 0) {
+        return data.map(row => {
+          try {
+            return JSON.parse(row.message);
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean);
+      }
+    } catch (e) {}
+  }
+
   try {
     const stored = localStorage.getItem(AI_CHAT_STORAGE_KEY);
     if (stored) {
       return JSON.parse(stored);
     }
-    localStorage.setItem(AI_CHAT_STORAGE_KEY, JSON.stringify(initialDefaultAiChats));
-    return initialDefaultAiChats;
+    return [];
   } catch (e) {
-    return initialDefaultAiChats;
+    return [];
   }
 }
 
@@ -343,6 +388,17 @@ export async function saveAiChatConversation({ userPrompt, aiResponse, model = '
     source,
     timestamp: new Date().toISOString()
   };
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('comments').insert([{
+        name: 'AI_CHAT',
+        role: 'SYS_AI_LOG',
+        message: JSON.stringify(newChat),
+        stars: 5
+      }]);
+    } catch (e) {}
+  }
 
   try {
     const existing = await fetchAiChatLogs();
@@ -366,6 +422,11 @@ export async function deleteAiChatLog(id) {
 }
 
 export async function clearAllAiChatLogs() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('comments').delete().eq('role', 'SYS_AI_LOG');
+    } catch (e) {}
+  }
   try {
     localStorage.setItem(AI_CHAT_STORAGE_KEY, JSON.stringify([]));
     return true;
@@ -815,10 +876,30 @@ export async function recordRealVisitorSession() {
     existingProfiles = existingProfiles.slice(0, 100);
     localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(existingProfiles));
 
-    // Store/upsert in Supabase if configured
+    // Store/upsert in Supabase Cloud Database (Role: SYS_VISITOR_LOG)
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('visitor_sessions').upsert([profileRecord]);
+        const jsonMsg = JSON.stringify(profileRecord);
+        const { data: existing } = await supabase
+          .from('comments')
+          .select('id')
+          .eq('role', 'SYS_VISITOR_LOG')
+          .eq('name', deviceId)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          await supabase.from('comments').update({
+            message: jsonMsg,
+            created_at: nowIso
+          }).eq('id', existing[0].id);
+        } else {
+          await supabase.from('comments').insert([{
+            name: deviceId,
+            role: 'SYS_VISITOR_LOG',
+            message: jsonMsg,
+            stars: profileRecord.visitCount || 1
+          }]);
+        }
       } catch (e) {}
     }
 
@@ -839,27 +920,39 @@ export async function updateVisitorDwellTime(seconds) {
     const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
     if (!stored) return;
     const profiles = JSON.parse(stored);
+    let targetProfile = null;
     const updated = profiles.map(p => {
       if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
         const prevSessionSeconds = p.currentSessionSeconds || 0;
         const delta = Math.max(1, seconds - prevSessionSeconds);
-        return {
+        targetProfile = {
           ...p,
           currentSessionSeconds: seconds,
           totalDwellSeconds: (p.totalDwellSeconds || p.duration_seconds || 0) + delta,
           lastSeen: new Date().toISOString()
         };
+        return targetProfile;
       }
       return p;
     });
     localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
 
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && targetProfile) {
       try {
-        await supabase.from('visitor_sessions').update({
-          duration_seconds: seconds,
-          lastSeen: new Date().toISOString()
-        }).eq('deviceId', deviceId);
+        const jsonMsg = JSON.stringify(targetProfile);
+        const { data: existing } = await supabase
+          .from('comments')
+          .select('id')
+          .eq('role', 'SYS_VISITOR_LOG')
+          .eq('name', deviceId)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          await supabase.from('comments').update({
+            message: jsonMsg,
+            created_at: new Date().toISOString()
+          }).eq('id', existing[0].id);
+        }
       } catch (e) {}
     }
   } catch (e) {}
@@ -876,49 +969,74 @@ export async function logVisitorActivity(activityDescription) {
     const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
     if (stored) {
       const profiles = JSON.parse(stored);
+      let targetProfile = null;
       const updated = profiles.map(p => {
         if (p.deviceId === deviceId || p.id === currentActiveSessionId || p === profiles[0]) {
           const currentActs = Array.isArray(p.activities) ? p.activities : [];
           if (currentActs[currentActs.length - 1] !== formattedAction) {
-            return {
+            targetProfile = {
               ...p,
               totalActionsCount: (p.totalActionsCount || currentActs.length) + 1,
               lastSeen: new Date().toISOString(),
               activities: [...currentActs, formattedAction].slice(-100)
             };
+            return targetProfile;
           }
         }
         return p;
       });
       localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(updated));
+
+      if (isSupabaseConfigured && supabase && targetProfile) {
+        try {
+          const jsonMsg = JSON.stringify(targetProfile);
+          const { data: existing } = await supabase
+            .from('comments')
+            .select('id')
+            .eq('role', 'SYS_VISITOR_LOG')
+            .eq('name', deviceId)
+            .limit(1);
+
+          if (existing && existing.length > 0) {
+            await supabase.from('comments').update({
+              message: jsonMsg,
+              created_at: new Date().toISOString()
+            }).eq('id', existing[0].id);
+          }
+        } catch (e) {}
+      }
     }
   } catch (e) {}
 }
 
 export async function fetchRealVisitorSessions() {
-  const sanitizeLocation = (loc) => {
-    if (typeof loc !== 'string') return '📡 IP Net: Local';
-    if (loc.indexOf('(🎯 GPS Exact)') !== loc.lastIndexOf('(🎯 GPS Exact)')) {
-      const parts = loc.split('|').map(s => s.trim());
-      const unique = Array.from(new Set(parts));
-      return unique.join(' | ');
-    }
-    return loc;
-  };
-
-  // 1. Try Supabase (Capacity 100)
+  // 1. Try Supabase Cloud Database (Role: SYS_VISITOR_LOG)
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
-        .from('visitor_sessions')
+        .from('comments')
         .select('*')
-        .order('lastSeen', { ascending: false })
+        .eq('role', 'SYS_VISITOR_LOG')
+        .order('created_at', { ascending: false })
         .limit(100);
+
       if (!error && data && data.length > 0) {
-        return data.map(s => ({
-          ...s,
-          location: sanitizeLocation(s.location)
-        }));
+        const cloudProfiles = data.map(row => {
+          try {
+            const parsed = JSON.parse(row.message);
+            return {
+              ...parsed,
+              location: sanitizeLocation(parsed.location)
+            };
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean);
+
+        if (cloudProfiles.length > 0) {
+          localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify(cloudProfiles));
+          return cloudProfiles;
+        }
       }
     } catch (e) {}
   }
@@ -942,7 +1060,7 @@ export async function clearRealVisitorSessions() {
   try {
     localStorage.setItem(REAL_VISITOR_LOGS_KEY, JSON.stringify([]));
     if (isSupabaseConfigured && supabase) {
-      await supabase.from('visitor_sessions').delete().neq('id', '0');
+      await supabase.from('comments').delete().eq('role', 'SYS_VISITOR_LOG');
     }
     return true;
   } catch (e) {
