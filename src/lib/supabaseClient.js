@@ -442,13 +442,30 @@ const REACTION_STORAGE_KEY = 'adityahere_reaction_counts_v1';
 const VISITOR_STATS_KEY = 'adityahere_visitor_stats_v1';
 
 const defaultReactions = {
-  rocket: 0,
-  brain: 0,
-  trophy: 0,
-  fire: 0
+  rocket: 12,
+  brain: 8,
+  trophy: 10,
+  fire: 25
 };
 
 export async function fetchReactionCounts() {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('role', 'SYS_REACTIONS')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!error && data && data.length > 0 && data[0].message) {
+        const cloudCounts = JSON.parse(data[0].message);
+        localStorage.setItem(REACTION_STORAGE_KEY, JSON.stringify(cloudCounts));
+        return cloudCounts;
+      }
+    } catch (e) {}
+  }
+
   try {
     const stored = localStorage.getItem(REACTION_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
@@ -466,8 +483,35 @@ export async function incrementReactionCount(type) {
       ...existing,
       [type]: (existing[type] || 0) + 1
     };
+
     localStorage.setItem(REACTION_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('reactionCountsUpdated', { detail: updated }));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const jsonMsg = JSON.stringify(updated);
+        const { data: existingRow } = await supabase
+          .from('comments')
+          .select('id')
+          .eq('role', 'SYS_REACTIONS')
+          .limit(1);
+
+        if (existingRow && existingRow.length > 0) {
+          await supabase.from('comments').update({
+            message: jsonMsg,
+            created_at: new Date().toISOString()
+          }).eq('id', existingRow[0].id);
+        } else {
+          await supabase.from('comments').insert([{
+            name: 'REACTION_COUNTS',
+            role: 'SYS_REACTIONS',
+            message: jsonMsg,
+            stars: 5
+          }]);
+        }
+      } catch (e) {}
+    }
+
     return updated;
   } catch (e) {
     return defaultReactions;

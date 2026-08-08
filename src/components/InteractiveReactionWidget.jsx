@@ -17,7 +17,18 @@ export default function InteractiveReactionWidget({ playClickSound }) {
     };
 
     window.addEventListener('reactionCountsUpdated', handleUpdate);
-    return () => window.removeEventListener('reactionCountsUpdated', handleUpdate);
+
+    // Sync reaction counts over the cloud every 4 seconds
+    const interval = setInterval(() => {
+      fetchReactionCounts().then((c) => {
+        if (c) setCounts(c);
+      });
+    }, 4000);
+
+    return () => {
+      window.removeEventListener('reactionCountsUpdated', handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleReaction = (type, emoji, e) => {
