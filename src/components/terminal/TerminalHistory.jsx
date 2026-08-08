@@ -55,27 +55,33 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
               </div>
 
               {/* Formatted Clean Response Body */}
-              <div className="text-white text-xs leading-relaxed space-y-1 font-mono">
+              <div className="text-white text-xs leading-relaxed space-y-1 font-mono overflow-x-auto max-w-full">
                 {item.text.split('\n').map((line, lIdx) => {
                   const trimmed = line.trim();
-                  if (!trimmed) return <div key={lIdx} className="h-1.5" />;
+                  if (!trimmed) return <div key={lIdx} className="h-1" />;
                   
-                  const isBullet = trimmed.startsWith('•') || trimmed.startsWith('-') || /^\d+\./.test(trimmed);
-                  const isFormula = trimmed.includes('=') || trimmed.includes('∛') || trimmed.includes('√') || trimmed.includes('xₙ') || trimmed.includes('³') || trimmed.includes('²');
+                  const isHeader = trimmed.startsWith('🌐') || trimmed.startsWith('====') || trimmed.startsWith('----');
+                  const isDevHeader = trimmed.startsWith('DEVICE ') || trimmed.startsWith('1.') || trimmed.startsWith('2.');
+                  const isBullet = (trimmed.startsWith('•') || trimmed.startsWith('- ')) && !isDevHeader;
+                  const isFormula = !isHeader && (trimmed.includes('∛') || trimmed.includes('√') || trimmed.includes('xₙ') || trimmed.includes('³') || trimmed.includes('²'));
 
                   return (
-                    <p 
+                    <div 
                       key={lIdx} 
                       className={`${
-                        isBullet 
-                          ? 'text-[#00E5FF] pl-2 border-l-2 border-[#00E5FF] my-1 font-semibold' 
-                          : isFormula 
-                            ? 'text-[#FFE600] bg-black/60 px-2 py-1 border border-[#FFE600]/40 font-mono my-1 font-bold' 
-                            : 'text-neutral-200'
+                        isHeader
+                          ? 'text-[#00E5FF] font-bold text-xs border-b border-[#00E5FF]/30 pb-0.5 my-1'
+                          : isDevHeader
+                            ? 'text-[#39FF14] bg-[#091a09] px-2 py-1 border-l-4 border-[#39FF14] font-bold my-1 font-mono text-[11px]'
+                            : isBullet 
+                              ? 'text-[#00E5FF] pl-2 border-l-2 border-[#00E5FF] my-0.5 font-semibold text-[11px]' 
+                              : isFormula 
+                                ? 'text-[#FFE600] bg-black/60 px-2 py-1 border border-[#FFE600]/40 font-mono my-1 font-bold' 
+                                : 'text-neutral-200 text-[11px] break-words'
                       }`}
                     >
                       {line}
-                    </p>
+                    </div>
                   );
                 })}
               </div>

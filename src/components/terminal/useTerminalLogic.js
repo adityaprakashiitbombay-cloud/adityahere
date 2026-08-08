@@ -282,23 +282,22 @@ AVAILABLE ADMIN COMMANDS & SHORTCUTS:
       if (!sessions || sessions.length === 0) {
         return '🌐 REAL VISITORS TABLE: No visitor sessions recorded yet.';
       }
-      return `🌐 REAL LIVE VISITORS AUDIT TRAIL TABLE (${sessions.length} Unique Devices Recorded):\n----------------------------------------------------\n` +
+      return `🌐 REAL LIVE VISITORS AUDIT TRAIL TABLE (${sessions.length} Unique Devices Recorded):\n====================================================\n` +
         sessions.map((s, i) => {
           const devCode = s.deviceId || `DEV-${s.id?.slice(-6) || 'LOCAL'}`;
           const visits = s.visitCount || 1;
-          const acts = Array.isArray(s.activities) && s.activities.length > 0 ? s.activities.slice(-5).join(' ➔ ') : '📍 Active Session';
+          const acts = Array.isArray(s.activities) && s.activities.length > 0 ? s.activities.slice(-3).join(' ➔ ') : 'Active Session';
           const dwell = formatDuration(s.totalDwellSeconds || s.duration_seconds || 1);
-          const firstSeenStr = s.firstSeen ? new Date(s.firstSeen).toLocaleString() : new Date(s.timestamp || Date.now()).toLocaleString();
-          const lastActiveStr = s.lastSeen ? new Date(s.lastSeen).toLocaleString() : 'Just now';
+          const firstSeenStr = s.firstSeen ? new Date(s.firstSeen).toLocaleDateString() : 'Today';
+          const lastActiveStr = s.lastSeen ? new Date(s.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
           const tasks = s.totalActionsCount || (Array.isArray(s.activities) ? s.activities.length : 1);
 
-          return `${i + 1}. [DEVICE CODE: ${devCode} | IP: ${s.ip} | ${s.location}]
-   • Visits Count: 📊 ${visits} visit(s) | Total Tasks/Actions: ⚡ ${tasks} tasks
-   • Device/Network: ${s.device} (${s.isp || 'ISP Net'})
-   • First Seen: 🗓️ ${firstSeenStr} | Last Active: 🕒 ${lastActiveStr}
-   • Cumulative Dwell Time: ⏱️ ${dwell}
-   • Recent Activity Trail: ${acts}`;
-        }).join('\n\n');
+          return `DEVICE ${i + 1}: [${devCode}] | IP: ${s.ip}
+Location: ${s.location}
+Stats: 📊 ${visits} Visit(s) | ⚡ ${tasks} Task(s) | ⏱️ Dwell: ${dwell} | 📱 ${s.device} (${s.isp || 'ISP'})
+Time: 🗓️ First: ${firstSeenStr} | 🕒 Last Active: ${lastActiveStr}
+Trail: ${acts}`;
+        }).join('\n----------------------------------------------------\n');
     }
 
 
