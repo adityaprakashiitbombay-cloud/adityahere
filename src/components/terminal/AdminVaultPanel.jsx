@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit3, Plus, CheckCircle2, Globe, X, Clock, Activity, Search, RefreshCw, Trash2 } from 'lucide-react';
 import { fetchRealVisitorSessions, clearRealVisitorSessions, formatDuration } from '../../lib/supabaseClient';
@@ -108,21 +109,22 @@ export default function AdminVaultPanel({
         )}
       </motion.div>
 
-      {/* 100-Visitor Full-Screen Telemetry Modal */}
-      <AnimatePresence>
-        {showVisitorModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 font-mono"
-          >
+      {/* 100-Visitor Full-Screen Telemetry Modal rendered via Portal directly on document.body */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showVisitorModal && (
             <motion.div
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-[#050505] border-3 border-[#00E5FF] w-full max-w-5xl max-h-[82vh] flex flex-col shadow-[8px_8px_0px_0px_#00E5FF] overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 font-mono"
             >
+              <motion.div
+                initial={{ scale: 0.95, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 15 }}
+                className="bg-[#050505] border-3 border-[#00E5FF] w-full max-w-5xl max-h-[85vh] flex flex-col shadow-[8px_8px_0px_0px_#00E5FF] overflow-hidden relative z-[999999]"
+              >
               {/* Header Bar */}
               <div className="bg-[#111111] border-b-2 border-[#00E5FF] p-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -257,7 +259,9 @@ export default function AdminVaultPanel({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
     </>
   );
 }
