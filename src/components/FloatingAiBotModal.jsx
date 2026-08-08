@@ -38,6 +38,7 @@ export default function FloatingAiBotModal({ playClickSound }) {
     if (!promptToSend || isProcessing) return;
 
     if (playClickSound) playClickSound();
+    setQuery('');
     setIsProcessing(true);
     setAiResponse(null);
     logVisitorActivity(`Asked AI: "${promptToSend.slice(0, 40)}"`);
