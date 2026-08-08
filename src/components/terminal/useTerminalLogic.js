@@ -161,7 +161,9 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
 
         const headers = {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://adityahere.vercel.app',
+          'X-Title': 'adityahere'
         };
 
         const openRouterModels = isOr
@@ -179,7 +181,7 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
                   { role: 'system', content: systemInstruction },
                   { role: 'user', content: userPrompt }
                 ],
-                max_tokens: 250
+                max_tokens: 800
               })
             });
 

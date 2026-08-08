@@ -333,11 +333,13 @@ Answer visitor queries with extreme intelligence, clarity, and neo-brutalist cha
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://adityahere.vercel.app',
+          'X-Title': 'adityahere'
         },
         body: JSON.stringify({
           model: 'openrouter/auto',
-          max_tokens: 250,
+          max_tokens: 800,
           messages: [
             { role: 'system', content: systemInstruction },
             { role: 'user', content: p }
