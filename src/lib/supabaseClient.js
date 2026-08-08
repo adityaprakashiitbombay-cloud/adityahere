@@ -474,9 +474,13 @@ export function subscribeToRealtimePresence(onCountChange) {
   }
 
   // Local fallback
-  return () => {};// ----------------------------------------------------
+  return () => {};
+}
+
+// ----------------------------------------------------
 // 6. 100% Real Live Visitor Geolocation Telemetry Engine (100 Capacity)
 // ----------------------------------------------------
+
 const REAL_VISITOR_LOGS_KEY = 'adityahere_real_visitor_logs_v1';
 let currentActiveSessionId = null;
 
