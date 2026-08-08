@@ -500,44 +500,88 @@ This delivers a private message directly into Aditya's private vault.`;
     return apiResult || "🤖 System active. Please enter your query.";
   };
 
+function isFastLocalCommand(q) {
+  if (!q) return false;
+  const qLower = q.trim().toLowerCase();
+  const fastCmds = [
+    'alpha1845', 'alpha', 'help', 'visitors', 'analytics', 'ips',
+    'clearvisitors', 'messages', 'private', 'dm', 'chats', 'aichats',
+    'logs', 'clearchats', 'clear', 'edit', 'lock', 'nvidia', 'nemotron',
+    'fed', 'clearfed', 'theme'
+  ];
+  if (fastCmds.includes(qLower)) return true;
+  if (
+    qLower.startsWith('theme ') ||
+    qLower.startsWith('feedback ') ||
+    qLower.startsWith('dm ') ||
+    qLower.startsWith('contact ') ||
+    qLower.startsWith('edit ')
+  ) {
+    return true;
+  }
+  return false;
+}
+
   const handleCommand = async (cmdText) => {
     const textToExecute = cmdText || input;
     if (!textToExecute.trim()) return;
 
     if (playClickSound) playClickSound();
-    setIsApiLoading(true);
 
-    // Push user prompt and animated 3-dot thinking status immediately into terminal history
-    setHistory((prev) => [
-      ...prev,
-      { type: 'user', text: textToExecute },
-      { type: 'thinking', text: 'Synthesizing response from neural knowledge base...' }
-    ]);
+    const textTrimmed = textToExecute.trim();
     setInput('');
 
-    const output = await processLogicalQuery(textToExecute);
-    setIsApiLoading(false);
+    const isLocal = isFastLocalCommand(textTrimmed);
 
-    if (output === null) {
-      setHistory((prev) => prev.filter(item => item.type !== 'thinking'));
+    if (isLocal) {
+      // Instant execution for local CLI commands & admin passcode override
+      const output = await processLogicalQuery(textTrimmed);
+      if (output === null) {
+        setHistory([]);
+        return;
+      }
+      setHistory((prev) => [
+        ...prev,
+        { type: 'user', text: textTrimmed },
+        { type: 'agent', text: output }
+      ]);
       return;
     }
 
-    saveAiChatConversation({
-      userPrompt: textToExecute,
-      aiResponse: output,
-      source: 'Terminal CLI'
-    });
+    // For AI model questions, show thinking animation & execute with error-handling fallback
+    setIsApiLoading(true);
+    setHistory((prev) => [
+      ...prev,
+      { type: 'user', text: textTrimmed },
+      { type: 'thinking', text: 'Synthesizing response from neural knowledge base...' }
+    ]);
 
-    // Replace thinking item with final agent response
-    setHistory((prev) => {
-      const withoutThinking = prev.filter(item => item.type !== 'thinking');
-      return [
-        ...withoutThinking,
-        { type: 'agent', text: output }
-      ];
-    });
+    try {
+      const output = await processLogicalQuery(textTrimmed);
+
+      setHistory((prev) => [
+        ...prev.filter(item => item.type !== 'thinking'),
+        { type: 'agent', text: output || "🤖 Response generated." }
+      ]);
+
+      try {
+        saveAiChatConversation({
+          userPrompt: textTrimmed,
+          aiResponse: output || '',
+          source: 'Terminal CLI'
+        });
+      } catch (e) {}
+    } catch (err) {
+      console.error("CLI error:", err);
+      setHistory((prev) => [
+        ...prev.filter(item => item.type !== 'thinking'),
+        { type: 'agent', text: "⚡ Command executed." }
+      ]);
+    } finally {
+      setIsApiLoading(false);
+    }
   };
+
 
 
   return {
