@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { portfolioData } from '../../data/portfolioData';
-import { fetchPrivateMessages, fetchAiChatLogs, saveAiChatConversation, clearAllAiChatLogs, submitVisitorComment, submitPrivateMessage, fetchRealVisitorSessions, clearRealVisitorSessions } from '../../lib/supabaseClient';
+import { fetchPrivateMessages, fetchAiChatLogs, saveAiChatConversation, clearAllAiChatLogs, submitVisitorComment, submitPrivateMessage, fetchRealVisitorSessions, clearRealVisitorSessions, logVisitorActivity, formatDuration } from '../../lib/supabaseClient';
 import { applyTheme } from '../ThemeSwitcher';
 
 const FED_KNOWLEDGE_STORAGE_KEY = 'adityahere_fed_ai_knowledge_v1';
 const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || import.meta.env.VITE_AI_API_KEY || '';
-
 
 const cleanMarkdownText = (str) => {
   if (!str) return '';
@@ -23,59 +22,60 @@ const cleanMarkdownText = (str) => {
   // 3. Clean subscripts & superscripts
   cleaned = cleaned.replace(/x_\{n\+1\}/g, 'xₙ₊₁');
   cleaned = cleaned.replace(/x_n\^2/g, 'xₙ²');
-  cleaned = cleaned.replace(/x_n/g, 'xₙ');
-  cleaned = cleaned.replace(/\^3/g, '³');
-  cleaned = cleaned.replace(/\^2/g, '²');
+  cleaned = cleaned.replace(/_([0-9a-z])/g, '₍$1₎');
+  cleaned = cleaned.replace(/\^([0-9a-z])/g, '⁽$1⁾');
 
-  // 4. Clean LaTeX brackets and operators
-  cleaned = cleaned.replace(/\\left\(/g, '(').replace(/\\right\)/g, ')');
-  cleaned = cleaned.replace(/\\left\[/g, '[').replace(/\\right\]/g, ']');
-  cleaned = cleaned.replace(/\\times/g, '×').replace(/\\div/g, '÷');
+  // 4. Remove leftover LaTeX commands & symbols
+  cleaned = cleaned.replace(/\\[a-zA-Z]+/g, '');
+  cleaned = cleaned.replace(/[\$\{\}]/g, '');
 
-  // 5. Remove standalone LaTeX delimiters $...$ and $$...$$
-  cleaned = cleaned.replace(/\$\$([\s\S]*?)\$\$/g, '$1');
-  cleaned = cleaned.replace(/\$([^$]+)\$/g, '$1');
-
-  // 6. Remove raw backslashes before special characters
-  cleaned = cleaned.replace(/\\([\\`*_{}[\]()#+-.!])/g, '$1');
-
-  // 7. Clean Markdown bold / italics / code blocks
-  cleaned = cleaned
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/`(.*?)`/g, '$1');
-
-  return cleaned.trim();
+  return cleaned;
 };
 
-export function useTerminalLogic(playClickSound) {
+function isFastLocalCommand(q) {
+  if (!q) return false;
+  const qLower = q.trim().toLowerCase();
+  const fastCmds = [
+    'alpha1845', 'alpha', 'help', 'visitors', 'analytics', 'ips',
+    'clearvisitors', 'messages', 'private', 'dm', 'chats', 'aichats',
+    'logs', 'clearchats', 'clear', 'edit', 'lock', 'nvidia', 'nemotron',
+    'fed', 'clearfed', 'theme'
+  ];
+  if (fastCmds.includes(qLower)) return true;
+  if (
+    qLower.startsWith('theme ') ||
+    qLower.startsWith('feedback ') ||
+    qLower.startsWith('dm ') ||
+    qLower.startsWith('contact ') ||
+    qLower.startsWith('edit ')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function useTerminalLogic({ playClickSound } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [input, setInput] = useState('');
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => {
-    return localStorage.getItem('adityahere_admin_unlocked') === 'true';
-  });
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(
+    () => localStorage.getItem('adityahere_admin_unlocked') === 'true'
+  );
   const [isLiveEditActive, setIsLiveEditActive] = useState(false);
-  const [fedKnowledgeList, setFedKnowledgeList] = useState([]);
   const [isApiLoading, setIsApiLoading] = useState(false);
-  const hasAutoExecutedRef = useRef(false);
-
-  // Admin Feed Form Inputs
-  const [feedKey, setFeedKey] = useState('');
-  const [feedVal, setFeedVal] = useState('');
-  const [feedSuccess, setFeedSuccess] = useState('');
-
   const [history, setHistory] = useState([
     {
-      type: 'system',
-      text: `adityahere. AI Agent Shell [Version 5.0 NVIDIA Nemotron Engine]\nAPI Integration: ${NVIDIA_API_KEY ? 'NVIDIA NEMOTRON 3 CONNECTED ⚡' : 'ONLINE'}\nType "help" for commands or ask any question.`
-    },
-    {
       type: 'agent',
-      text: `🤖 System Online. I am the AI Agent for adityahere. Ask me anything about IIT JEE, Class 10th score (95.4%), Olympiads (IOQM/RMO/NSEP), mentors, or physics!`
+      text: '🤖 System Online. I am the AI Agent for adityahere. Ask me anything about IIT JEE, Class 10th score (95.4%), Olympiads (IOQM/RMO/NSEP), mentors, or physics!'
     }
   ]);
 
+  const [feedKey, setFeedKey] = useState('');
+  const [feedVal, setFeedVal] = useState('');
+  const [feedSuccess, setFeedSuccess] = useState('');
+  const [fedKnowledgeList, setFedKnowledgeList] = useState([]);
+
   const terminalEndRef = useRef(null);
+  const hasAutoExecutedRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -92,7 +92,6 @@ export function useTerminalLogic(playClickSound) {
     window.addEventListener('executeAdminCmd', handleExecuteCmd);
     return () => window.removeEventListener('executeAdminCmd', handleExecuteCmd);
   }, []);
-
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,24 +112,27 @@ export function useTerminalLogic(playClickSound) {
   const toggleLiveEdit = (enable) => {
     const nextState = enable !== undefined ? enable : !isLiveEditActive;
     setIsLiveEditActive(nextState);
-    if (typeof document !== 'undefined') {
-      document.body.contentEditable = nextState ? "true" : "false";
-    }
   };
 
   const handleAddFedKnowledge = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!feedKey.trim() || !feedVal.trim()) return;
 
-    if (playClickSound) playClickSound();
-    const updated = [...fedKnowledgeList, { topic: feedKey.trim().toLowerCase(), content: feedVal.trim() }];
+    const newItem = {
+      id: Date.now(),
+      topic: feedKey.trim(),
+      content: feedVal.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    const updated = [newItem, ...fedKnowledgeList];
     setFedKnowledgeList(updated);
     localStorage.setItem(FED_KNOWLEDGE_STORAGE_KEY, JSON.stringify(updated));
 
     setFeedKey('');
     setFeedVal('');
-    setFeedSuccess(`Fed fact "${feedKey}" successfully memorized into live AI context!`);
-    setTimeout(() => setFeedSuccess(''), 4000);
+    setFeedSuccess(`Fed fact "${newItem.topic}" into AI memory!`);
+    setTimeout(() => setFeedSuccess(''), 3000);
   };
 
   const handleClearFedKnowledge = () => {
@@ -138,63 +140,16 @@ export function useTerminalLogic(playClickSound) {
     localStorage.removeItem(FED_KNOWLEDGE_STORAGE_KEY);
   };
 
-  // Live Call to AI Engine (OpenRouter / NVIDIA Nemotron / Gemini API) with Complete Fed Knowledge
   const callNvidiaNemotronAPI = async (userPrompt) => {
-    const customMemoryText = fedKnowledgeList.length > 0
-      ? `\n\nCUSTOM FED KNOWLEDGE FROM ADMIN VAULT:\n` + fedKnowledgeList.map(f => `- ${f.topic.toUpperCase()}: ${f.content}`).join('\n')
-      : '';
-
-    const systemInstruction = `You are the official live AI Assistant and Persona Representative for adityahere. (Aditya).
-You must answer questions accurately, intelligently, and dynamically using the following verified facts:
-
-========================================
-COMPLETE VERIFIED KNOWLEDGE BASE:
-========================================
-
-1. IDENTITY & BIO:
-- Name / Handle : adityahere. (Aditya)
-- Age           : 15 Years Old (Born May 11, 2011 in Salempur / Lalganj, Bihar)
-- Current Target: IIT JEE 2028 Aspirant @ Allen Patna (Ashiyana Digha Branch)
-- Bio Quote     : "${portfolioData.hero.bio}"
-
-2. ACADEMIC & OLYMPIAD CREDENTIALS:
-- Class 10th Result: 95.4% overall in CBSE with a 100/100 (PERFECT SCORE) in Information Technology (IT).
-- IOQM (Indian Olympiad Qualifier in Mathematics): 2x Qualified (National Stage 1).
-- RMO (Regional Mathematical Olympiad)          : 1x Qualified (National Stage 2 Advanced Proofs).
-- NSEP (National Standard Exam in Physics)      : 1x Qualified (National Stage 1 Physics Olympiad).
-
-3. INSTITUTIONS & MENTORS:
-- Samarthya Classes & Pioneer Academy Lalganj: Formative middle school years (Class 4–8).
-- Key Mentors: Neha Mam (English & Communication) and Ajit Sir (Mathematics & Problem Solving).
-- St. Michaels Lalganj: Early foundational schooling.
-- Allen Patna: Enrolled in the prestigious 2-Year Classroom Program at Ashiyana Digha Branch for JEE Advanced 2028.
-
-4. CLOSE HOMIES & BROTHER:
-- Abhay: Elder brother, confidant & constant supporter in Hajipur.
-- Prashant, Ayush, Sahil: Close school homies from Pioneer Academy Lalganj.
-
-5. CORE WORLDVIEW & PHILOSOPHY:
-- Atheist: Empirical scientific reasoning and rational inquiry.
-- Feminist: Advocate for equal rights, safety, and gender equality.
-- Leftist: Progressive secular values, human welfare, and economic equity.
-- Personal Motto: "Inspired by no one." (Motivation comes from first principles, intense curiosity, and physics).
-
-6. TECHNICAL & PASSION DOMAINS:
-- Advanced Physics: Classical mechanics, Newton's laws, Irodov & Pathfinder problem solving.
-- Pure Mathematics: Number theory, geometry, algebra, combinatorics for Olympiads.
-- AI & Engineering: Autonomous agents, LLM integrations, modern neo-brutalist web development.
-- Cricket: Fast bowling bio-mechanics, ball trajectory analytics, match strategy.
-${customMemoryText}
-
-========================================
-CRITICAL FORMATTING & STYLE RULES:
-========================================
-- NO RAW LATEX SYMBOLS: NEVER output raw LaTeX delimiters like $\sqrt[3]{x}$, \frac{a}{b}, $x$, or $$...$$. Use clean plain text, unicode mathematical symbols (e.g. ∛x, x³, xₙ, ÷, ±, √x, 1/3), or standard terminal math formulas.
-- CREATIVITY & WIT: Be exceptionally creative, witty, vivid, articulate, and intellectually engaging! Avoid dry or robotic templates.
-- Infuse sharp analogies, creative physics/math insights, inspiring quotes, and authentic personality.
-- Tone: High-IQ, cyber-brutalist, enthusiastic, confident, and deeply articulate.
-- Length: Crisp yet rich (2-5 punchy sentences for quick queries; articulate, detailed steps for math, physics, coding, or philosophy).`;
-
+    const systemInstruction = `You are the official high-IQ AI Nemotron Agent for Aditya Prakash (adityahere).
+Aditya is a 15-year-old IIT JEE 2028 aspirant studying at Allen Career Institute, Patna (Ashiyana Digha Branch).
+Key Achievements:
+- 95.4% overall in Class 10th CBSE with 100/100 Perfect Score in IT (Information Technology).
+- 2x IOQM Qualifier, 1x RMO Qualifier, 1x NSEP Qualifier.
+- Middle School Mentors: Neha Mam (Maths) & Ajit Sir (Science).
+- Close Homies: Abhay (brother), Prashant, Ayush, Sahil.
+- Ideology: Rational Atheist, Secular Leftist, Feminist. Motto: "Inspired by no one."
+Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.`;
 
     try {
       if (NVIDIA_API_KEY) {
@@ -239,15 +194,12 @@ CRITICAL FORMATTING & STYLE RULES:
               const text = data.choices?.[0]?.message?.content;
               if (text && text.trim()) return cleanMarkdownText(text.trim());
             }
-          } catch (e) {
-            console.warn(`Fetch attempt error for ${modelCandidate}:`, e);
-          }
+          } catch (e) {}
         }
       }
 
       return cleanMarkdownText(synthesizeDynamicResponse(userPrompt));
     } catch (err) {
-      console.warn("AI Engine execution error:", err);
       return cleanMarkdownText(synthesizeDynamicResponse(userPrompt));
     }
   };
@@ -266,23 +218,26 @@ CRITICAL FORMATTING & STYLE RULES:
     if (p.includes('kya haal') || p.includes('kaise') || p.includes('bhai') || p.includes('hey') || p.includes('hello') || p.includes('hi')) {
       return `Sab badhiya bhai! 🚀 I am adityahere's live AI agent. Ask me anything about my IIT JEE 2028 preparation @ Allen Patna, Olympiads (IOQM 2x, RMO 1x, NSEP 1x), 95.4% in 10th, or Physics!`;
     }
-    if (p.includes('mark') || p.includes('score') || p.includes('10th') || p.includes('percent')) {
+    if (p.includes('mark') || p.includes('score') || p.includes('10th') || p.includes('percent') || p.includes('board') || p.includes('cbse')) {
       return `Aditya scored 95.4% overall in Class 10th CBSE with a perfect 100/100 score in Information Technology (IT)! 💯`;
     }
-    if (p.includes('allen') || p.includes('jee') || p.includes('patna') || p.includes('iit')) {
+    if (p.includes('allen') || p.includes('jee') || p.includes('patna') || p.includes('iit') || p.includes('study') || p.includes('coaching')) {
       return `Aditya is currently preparing for IIT JEE 2028 at Allen Patna (Ashiyana Digha Branch) with intense problem solving in Physics (Irodov/PathFinder), Chemistry, and Math.`;
     }
-    if (p.includes('olympiad') || p.includes('ioqm') || p.includes('rmo') || p.includes('nsep')) {
+    if (p.includes('olympiad') || p.includes('ioqm') || p.includes('rmo') || p.includes('nsep') || p.includes('math') || p.includes('physics')) {
       return `Aditya is a 2x IOQM (Stage 1 Maths Olympiad) qualifier, 1x RMO (Stage 2 Regional Maths Olympiad) qualifier, and 1x NSEP (National Standard Exam in Physics) qualifier! 🏆`;
     }
-    if (p.includes('mentor') || p.includes('teacher') || p.includes('ajit') || p.includes('neha')) {
+    if (p.includes('mentor') || p.includes('teacher') || p.includes('ajit') || p.includes('neha') || p.includes('guide')) {
       return `Aditya's key middle school mentors who guided his academic foundation are Neha Mam (Maths) and Ajit Sir (Science)! 📚`;
     }
-    if (p.includes('friend') || p.includes('abhay') || p.includes('homie')) {
+    if (p.includes('friend') || p.includes('abhay') || p.includes('homie') || p.includes('brother')) {
       return `Close homies: Abhay (Brother & confidant), Prashant, Ayush, and Sahil. 👥`;
     }
-    if (p.includes('ideolog') || p.includes('value') || p.includes('atheist') || p.includes('feminist') || p.includes('leftist')) {
+    if (p.includes('ideolog') || p.includes('value') || p.includes('atheist') || p.includes('feminist') || p.includes('leftist') || p.includes('motto') || p.includes('believe')) {
       return `Aditya's worldview: Atheist (empirical rationalism), Feminist (gender equality & social justice), Leftist (secular progressivism). Personal motto: "Inspired by no one." 🧠`;
+    }
+    if (p.includes('project') || p.includes('skill') || p.includes('web') || p.includes('tech') || p.includes('code') || p.includes('build')) {
+      return `Aditya builds ultra-modern neo-brutalist web systems, hardware-accelerated 60FPS background canvases, AI CLI agents, and real-time IP telemetry applications with React 19, Framer Motion, and Supabase! 💻`;
     }
     return `⚡ [LIVE AGENT]: Aditya is a 15-year-old IIT JEE 2028 aspirant @ Allen Patna with 95.4% in 10th (100% in IT) and IOQM 2x / RMO 1x / NSEP 1x Olympiad credentials. Ask me anything specific!`;
   };
@@ -346,7 +301,6 @@ AVAILABLE ADMIN COMMANDS & SHORTCUTS:
       return '🌐 Cleared all recorded real visitor session logs.';
     }
 
-
     if (qLower === 'edit' || qLower.startsWith('edit ')) {
       if (!isAdminUnlocked && localStorage.getItem('adityahere_admin_unlocked') !== 'true') {
         return '🔒 ACCESS DENIED: Enter ALPHA1845 code first to open the Server CMS.';
@@ -402,7 +356,7 @@ AVAILABLE ADMIN COMMANDS & SHORTCUTS:
     if (qLower === 'nvidia' || qLower === 'nemotron' || qLower.includes('nemotron 3')) {
       return `⚡ NVIDIA NEMOTRON & AI ENGINE STATUS:
 ------------------------------------------
-Status: ${NVIDIA_API_KEY ? '✅ CONNECTED & ONLINE' : '⚠️ READY'}
+Status: ${NVIDIA_API_KEY ? '✅ CONNECTED & ONLINE' : '⚠️ LIVE AGENT ACTIVE'}
 Key Configuration: .env / VITE_NVIDIA_API_KEY
 All questions are dynamically executed live through the AI Model!`;
     }
@@ -489,6 +443,8 @@ This delivers a private message directly into Aditya's private vault.`;
 • feedback <msg>: Submit public visitor board feedback (No password needed)
 • dm <msg>      : Send direct private message to Aditya (No password needed)
 • ALPHA1845    : Unlock Admin Matrix & Live Server Editor
+• visitors     : Read real live visitor IPs, location, dwell time & activity trail table
+• clearvisitors: Purge real visitor sessions table
 • messages     : View private direct messages (Admin)
 • chats        : View visitor AI chat transcripts (Admin)
 • fed          : View custom fed facts in AI memory
@@ -497,30 +453,8 @@ This delivers a private message directly into Aditya's private vault.`;
     }
 
     const apiResult = await callNvidiaNemotronAPI(rawQuery);
-    return apiResult || "🤖 System active. Please enter your query.";
+    return apiResult || synthesizeDynamicResponse(rawQuery);
   };
-
-function isFastLocalCommand(q) {
-  if (!q) return false;
-  const qLower = q.trim().toLowerCase();
-  const fastCmds = [
-    'alpha1845', 'alpha', 'help', 'visitors', 'analytics', 'ips',
-    'clearvisitors', 'messages', 'private', 'dm', 'chats', 'aichats',
-    'logs', 'clearchats', 'clear', 'edit', 'lock', 'nvidia', 'nemotron',
-    'fed', 'clearfed', 'theme'
-  ];
-  if (fastCmds.includes(qLower)) return true;
-  if (
-    qLower.startsWith('theme ') ||
-    qLower.startsWith('feedback ') ||
-    qLower.startsWith('dm ') ||
-    qLower.startsWith('contact ') ||
-    qLower.startsWith('edit ')
-  ) {
-    return true;
-  }
-  return false;
-}
 
   const handleCommand = async (cmdText) => {
     const textToExecute = cmdText || input;
@@ -561,7 +495,7 @@ function isFastLocalCommand(q) {
 
       setHistory((prev) => [
         ...prev.filter(item => item.type !== 'thinking'),
-        { type: 'agent', text: output || "🤖 Response generated." }
+        { type: 'agent', text: output || synthesizeDynamicResponse(textTrimmed) }
       ]);
 
       try {
@@ -572,17 +506,16 @@ function isFastLocalCommand(q) {
         });
       } catch (e) {}
     } catch (err) {
-      console.error("CLI error:", err);
+      console.error("CLI processing error:", err);
+      const fallbackAns = synthesizeDynamicResponse(textTrimmed);
       setHistory((prev) => [
         ...prev.filter(item => item.type !== 'thinking'),
-        { type: 'agent', text: "⚡ Command executed." }
+        { type: 'agent', text: fallbackAns }
       ]);
     } finally {
       setIsApiLoading(false);
     }
   };
-
-
 
   return {
     input,
