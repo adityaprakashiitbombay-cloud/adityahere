@@ -54,7 +54,7 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#000000] text-white p-6 font-mono flex flex-col items-center justify-center text-center">
+        <div className="min-h-[100dvh] bg-[#000000] text-white p-6 font-mono flex flex-col items-center justify-center text-center">
           <div className="max-w-xl border-3 border-[#39FF14] p-6 shadow-[8px_8px_0px_0px_#39FF14] bg-[#050505] space-y-4">
             <h1 className="text-xl font-black text-[#39FF14]">⚡ SYSTEM AUTO-RECOVERY</h1>
             <p className="text-xs text-neutral-300">
@@ -128,7 +128,7 @@ export default function App() {
       {/* Hidden Pre-buffered Victory Audio Track */}
       <audio id="global-victory-audio" src="/romancee.mp3" preload="auto" className="hidden" />
 
-      <div className="min-h-screen bg-[#000000] text-white flex flex-col font-mono selection:bg-[#39FF14] selection:text-black overflow-x-hidden relative">
+      <div className="min-h-[100dvh] bg-[#000000] text-white flex flex-col font-mono selection:bg-[#39FF14] selection:text-black overflow-x-hidden relative">
         {/* Accessible Skip Link */}
         <a href="#main-content" className="skip-link font-mono">
           Skip to Main Content
@@ -138,7 +138,7 @@ export default function App() {
         <UnifiedBackgroundSystem quality="high" opacity={0.20} />
 
         {/* 1. Main Page Layout (Instant mount with zero lag) */}
-        <div className="flex flex-col min-h-screen relative z-10">
+        <div className="flex flex-col min-h-[100dvh] relative z-10">
           {/* Dynamic Newsflash & Seamless Continuous Marquee Ticker Bar */}
           <DynamicTopTicker playUiClick={playUiClick} />
 

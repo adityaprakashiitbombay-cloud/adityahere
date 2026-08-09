@@ -11,7 +11,7 @@ export default function QuickCommandChips({ onSelectCommand }) {
           key={cmd}
           type="button"
           onClick={() => onSelectCommand(cmd)}
-          className="px-3 py-1.5 text-xs font-mono font-bold border border-white bg-[#000000] text-white hover:bg-[#39FF14] hover:text-black transition-all cursor-pointer shadow-[2px_2px_0px_0px_#222] hover:shadow-[3px_3px_0px_0px_#ffffff] shrink-0 active:scale-95 min-h-[44px] sm:min-h-[34px] flex items-center justify-center select-none"
+          className="px-3 py-1.5 text-xs font-mono font-bold border border-white bg-[#000000] text-white hover:bg-[#39FF14] hover:text-black transition-all cursor-pointer shadow-[2px_2px_0px_0px_#222] hover:shadow-[3px_3px_0px_0px_#ffffff] shrink-0 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none min-h-[44px] sm:min-h-[34px] flex items-center justify-center select-none"
         >
           &gt; {cmd}
         </button>

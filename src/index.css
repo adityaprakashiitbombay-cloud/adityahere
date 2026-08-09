@@ -89,8 +89,8 @@
 }
 
 .brutal-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px 0px #ffffff;
+  transform: translate(4px, 4px);
+  box-shadow: none;
 }
 
 .brutal-input {
@@ -213,4 +213,15 @@
   background-size: 100% 4px;
   pointer-events: none;
 }
+
+/* Blinking Block Cursor */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-cursor-blink {
+  animation: cursorBlink 1s step-start infinite;
+}
+
 

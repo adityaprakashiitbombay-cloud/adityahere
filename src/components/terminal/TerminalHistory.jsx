@@ -12,7 +12,11 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
   };
 
   return (
-    <div className="bg-[#000000] border-2 border-white p-3.5 sm:p-4 h-[340px] md:h-[420px] max-h-[55vh] overflow-y-auto font-mono text-xs text-[#39FF14] space-y-3 shadow-[inset_0px_0px_10px_rgba(0,0,0,0.9)] scroll-smooth overscroll-contain">
+    <div className="relative border-2 border-white bg-[#000000]">
+      {/* CRT Scanline Overlay */}
+      <div className="absolute inset-0 cyber-scanlines pointer-events-none mix-blend-overlay opacity-40 z-10"></div>
+      
+      <div className="p-3.5 sm:p-4 h-[340px] md:h-[420px] max-h-[55vh] overflow-y-auto font-mono text-xs text-[#39FF14] space-y-3 shadow-[inset_0px_0px_10px_rgba(0,0,0,0.9)] scroll-smooth overscroll-contain relative z-0">
       {history.map((item, idx) => (
         <div key={idx} className="leading-relaxed whitespace-pre-wrap relative group">
           {item.type === 'user' && (
@@ -46,7 +50,7 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
                 <button
                   type="button"
                   onClick={() => handleCopy(item.text, idx)}
-                  className="bg-black hover:bg-[#39FF14] hover:text-black border border-[#39FF14] text-[#39FF14] px-2.5 py-1 text-[10px] flex items-center gap-1 transition-colors cursor-pointer font-bold shadow-[2px_2px_0px_0px_#39FF14] active:scale-95 min-h-[34px]"
+                  className="bg-black hover:bg-[#39FF14] hover:text-black border border-[#39FF14] text-[#39FF14] px-2.5 py-1 text-[10px] flex items-center gap-1 transition-colors cursor-pointer font-bold shadow-[2px_2px_0px_0px_#39FF14] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none min-h-[34px]"
                   title="Copy response text"
                 >
                   {copiedIdx === idx ? <Check className="w-3.5 h-3.5 text-[#39FF14]" /> : <Copy className="w-3.5 h-3.5" />}
@@ -100,6 +104,7 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
       )}
 
       <div ref={terminalEndRef} />
+      </div>
     </div>
   );
 }

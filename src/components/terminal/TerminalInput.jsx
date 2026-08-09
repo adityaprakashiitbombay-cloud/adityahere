@@ -58,7 +58,7 @@ export default function TerminalInput({
       >
         <TerminalIcon className="w-3.5 h-3.5 text-[#39FF14] animate-pulse hidden sm:inline-block" />
         <span className="tracking-tight">
-          aditya<span className="text-white">:</span><span className="text-[#00E5FF]">~</span><span className="text-white">$</span>
+          aditya<span className="text-white">:</span><span className="text-[#00E5FF]">~</span><span className="text-white">$</span><span className="ml-1.5 inline-block w-2 h-3.5 bg-[#39FF14] animate-cursor-blink align-middle translate-y-[-1px]"></span>
         </span>
       </div>
 
