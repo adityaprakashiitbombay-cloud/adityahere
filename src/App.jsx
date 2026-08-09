@@ -13,6 +13,8 @@ import DynamicTopTicker from './components/DynamicTopTicker';
 import UnifiedBackgroundSystem from './components/UnifiedBackgroundSystem';
 import AdminFloatingToolbar from './components/admin/AdminFloatingToolbar';
 import { useSoundEffects } from './hooks/useSoundEffects';
+import { fireAcademicVictoryConfetti } from './utils/confettiEffects';
+import { updateVisitorDwellTime, logVisitorActivity } from './lib/supabaseClient';
 
 // Global Error Boundary — auto-resets on route change so navigating away from a crashed page auto-recovers
 class ErrorBoundary extends Component {
@@ -72,9 +74,6 @@ class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
-
-import { fireAcademicVictoryConfetti } from './utils/confettiEffects';
-import { updateVisitorDwellTime, logVisitorActivity } from './lib/supabaseClient';
 
 export default function App() {
   // Show system boot // stage 1 splash screen on load
