@@ -70,6 +70,11 @@ export default function TerminalInput({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={(e) => {
+            setTimeout(() => {
+              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          }}
           placeholder={
             isApiLoading 
               ? "AI Model is executing query..." 
@@ -84,7 +89,7 @@ export default function TerminalInput({
           autoCapitalize="none"
           spellCheck="false"
           // text-[16px] prevents Android Chrome and iOS Safari from auto-zooming on input focus
-          className="w-full bg-[#000000] border-2 border-white px-3 py-2.5 sm:py-2 text-[16px] sm:text-xs text-white placeholder-neutral-500 focus:border-[#39FF14] focus:shadow-[0px_0px_10px_rgba(57,255,20,0.3)] outline-none font-mono transition-all disabled:opacity-50 min-h-[44px] sm:min-h-[38px] rounded-none"
+          className="w-full bg-[#000000] border-2 border-white px-3 py-2.5 sm:py-2 text-[16px] sm:text-xs text-white placeholder-neutral-500 focus:border-[#39FF14] focus:shadow-[0px_0px_10px_rgba(57,255,20,0.3)] outline-none font-mono transition-all disabled:opacity-50 min-h-[48px] sm:min-h-[38px] rounded-none"
         />
         
         {/* Subtle Enter Hint on Desktop */}
@@ -92,6 +97,43 @@ export default function TerminalInput({
           <CornerDownLeft className="w-3 h-3 text-[#39FF14]" />
         </div>
       </div>
+
+      {/* Mobile-Friendly Command History Navigation Buttons */}
+      {commandHistory.length > 0 && (
+        <div className="flex sm:hidden items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (historyIndex < commandHistory.length - 1) {
+                const nextIdx = historyIndex + 1;
+                setHistoryIndex(nextIdx);
+                setInput(commandHistory[nextIdx]);
+              }
+            }}
+            className="bg-[#111111] text-[#39FF14] border border-[#39FF14] px-2 py-2 text-[10px] font-bold min-h-[48px] min-w-[40px] flex items-center justify-center active:scale-95"
+            title="Previous Command"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (historyIndex > 0) {
+                const prevIdx = historyIndex - 1;
+                setHistoryIndex(prevIdx);
+                setInput(commandHistory[prevIdx]);
+              } else if (historyIndex === 0) {
+                setHistoryIndex(-1);
+                setInput('');
+              }
+            }}
+            className="bg-[#111111] text-[#39FF14] border border-[#39FF14] px-2 py-2 text-[10px] font-bold min-h-[48px] min-w-[40px] flex items-center justify-center active:scale-95"
+            title="Next Command"
+          >
+            ▼
+          </button>
+        </div>
+      )}
 
       {/* Touch-Friendly Submit Button */}
       <button

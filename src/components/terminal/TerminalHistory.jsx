@@ -12,18 +12,18 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
   };
 
   return (
-    <div className="bg-[#000000] border-2 border-white p-4 h-[320px] overflow-y-auto font-mono text-xs text-[#39FF14] space-y-3 shadow-[inset_0px_0px_10px_rgba(0,0,0,0.9)] scroll-smooth">
+    <div className="bg-[#000000] border-2 border-white p-3.5 sm:p-4 h-[340px] md:h-[420px] max-h-[55vh] overflow-y-auto font-mono text-xs text-[#39FF14] space-y-3 shadow-[inset_0px_0px_10px_rgba(0,0,0,0.9)] scroll-smooth overscroll-contain">
       {history.map((item, idx) => (
         <div key={idx} className="leading-relaxed whitespace-pre-wrap relative group">
           {item.type === 'user' && (
-            <div className="text-white font-bold flex items-start gap-2 font-mono">
+            <div className="text-white font-bold flex items-start gap-2 font-mono break-all">
               <span className="text-[#39FF14]">&gt;</span>
-              <span>{item.text}</span>
+              <span className="break-words">{item.text}</span>
             </div>
           )}
 
           {item.type === 'system' && (
-            <div className="text-neutral-400 italic border-b border-neutral-800 pb-1 font-mono">
+            <div className="text-neutral-400 italic border-b border-neutral-800 pb-1 font-mono break-words">
               {item.text}
             </div>
           )}
@@ -36,7 +36,7 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
           )}
 
           {item.type === 'agent' && (
-            <div className="text-[#39FF14] bg-[#020702] p-3.5 border-l-4 border-[#39FF14] border-t border-b border-r border-[#39FF14]/30 mt-2 font-mono relative shadow-[inset_0px_0px_15px_rgba(57,255,20,0.08)]">
+            <div className="text-[#39FF14] bg-[#020702] p-3 sm:p-3.5 border-l-4 border-[#39FF14] border-t border-b border-r border-[#39FF14]/30 mt-2 font-mono relative shadow-[inset_0px_0px_15px_rgba(57,255,20,0.08)]">
               {/* High-Tech Agent Response Badge Header */}
               <div className="flex items-center justify-between text-[10px] text-[#39FF14] font-black uppercase pb-2 mb-2 border-b border-[#39FF14]/20 select-none">
                 <div className="flex items-center gap-1.5">
@@ -46,10 +46,10 @@ export default function TerminalHistory({ history, terminalEndRef, isApiLoading 
                 <button
                   type="button"
                   onClick={() => handleCopy(item.text, idx)}
-                  className="bg-black hover:bg-[#39FF14] hover:text-black border border-[#39FF14] text-[#39FF14] px-2 py-0.5 text-[9px] flex items-center gap-1 transition-colors cursor-pointer font-bold shadow-[2px_2px_0px_0px_#39FF14]"
+                  className="bg-black hover:bg-[#39FF14] hover:text-black border border-[#39FF14] text-[#39FF14] px-2.5 py-1 text-[10px] flex items-center gap-1 transition-colors cursor-pointer font-bold shadow-[2px_2px_0px_0px_#39FF14] active:scale-95 min-h-[34px]"
                   title="Copy response text"
                 >
-                  {copiedIdx === idx ? <Check className="w-3 h-3 text-[#39FF14]" /> : <Copy className="w-3 h-3" />}
+                  {copiedIdx === idx ? <Check className="w-3.5 h-3.5 text-[#39FF14]" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedIdx === idx ? 'COPIED' : 'COPY'}</span>
                 </button>
               </div>

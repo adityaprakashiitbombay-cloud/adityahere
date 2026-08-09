@@ -341,22 +341,23 @@ export default function AdminVaultPanel({
 
     {/* Dedicated Single Visitor Profile Inspector Modal */}
     {typeof document !== 'undefined' && selectedVisitor && createPortal(
-      <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 font-mono">
-        <div className="bg-[#050505] border-3 border-[#39FF14] w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[8px_8px_0px_0px_#39FF14] overflow-hidden relative">
+      <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6 font-mono overscroll-contain">
+        <div className="bg-[#050505] border-3 border-[#39FF14] w-full max-w-4xl max-h-[92dvh] max-h-[92vh] flex flex-col shadow-[8px_8px_0px_0px_#39FF14] overflow-hidden relative">
           {/* Inspector Header */}
-          <div className="bg-[#111111] border-b-2 border-[#39FF14] p-4 flex items-center justify-between gap-2">
+          <div className="bg-[#111111] border-b-2 border-[#39FF14] p-3 sm:p-4 flex items-center justify-between gap-2 sticky top-0 z-20">
             <div className="flex items-center gap-2">
-              <span className="bg-[#39FF14] text-black font-black px-2 py-0.5 text-xs">
+              <span className="bg-[#39FF14] text-black font-black px-2 py-0.5 text-xs shrink-0">
                 {selectedVisitor.deviceId || 'DEV-PROFILE'}
               </span>
-              <h2 className="text-base font-black text-white uppercase tracking-wider">
+              <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-wider">
                 INSPECT VISITOR DEVICE PROFILE & ACTIVITY TIMELINE
               </h2>
             </div>
 
             <button
               onClick={() => setSelectedVisitor(null)}
-              className="bg-red-500 text-black border border-white p-1 font-bold cursor-pointer hover:scale-105"
+              className="bg-red-500 text-black border border-white p-2 font-bold cursor-pointer hover:scale-105 active:scale-95 min-w-[42px] min-h-[42px] flex items-center justify-center"
+              title="Close Profile Inspector"
             >
               <X className="w-5 h-5" />
             </button>
