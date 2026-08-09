@@ -1,13 +1,8 @@
-import React, { useState, Component } from 'react';
+import React, { useState, Component, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import EntrySplash from './components/EntrySplash';
-import HomePage from './pages/HomePage';
-import TimelinePage from './pages/TimelinePage';
-import ExpertisePage from './pages/ExpertisePage';
-import TerminalPage from './pages/TerminalPage';
-import FeedbackPage from './pages/FeedbackPage';
 import BrandLogo from './components/BrandLogo';
 import DynamicTopTicker from './components/DynamicTopTicker';
 import UnifiedBackgroundSystem from './components/UnifiedBackgroundSystem';
@@ -15,6 +10,24 @@ import AdminFloatingToolbar from './components/admin/AdminFloatingToolbar';
 import { useSoundEffects } from './hooks/useSoundEffects';
 import { fireAcademicVictoryConfetti } from './utils/confettiEffects';
 import { updateVisitorDwellTime, logVisitorActivity } from './lib/supabaseClient';
+
+// React Code-Splitting: Lazy load page chunks on demand to minimize initial boot size
+const HomePage = lazy(() => import('./pages/HomePage'));
+const TimelinePage = lazy(() => import('./pages/TimelinePage'));
+const ExpertisePage = lazy(() => import('./pages/ExpertisePage'));
+const TerminalPage = lazy(() => import('./pages/TerminalPage'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+
+function CyberRouteLoader() {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center p-6 font-mono">
+      <div className="bg-[#050505] border-2 border-[#39FF14] p-4 text-xs text-[#39FF14] flex items-center gap-2.5 shadow-[4px_4px_0px_0px_#39FF14] animate-pulse">
+        <span className="w-2 h-2 rounded-full bg-[#39FF14]" />
+        <span>⚡ [ SYSTEM ROUTE LOADING... SYNCHRONIZING MATRIX ]</span>
+      </div>
+    </div>
+  );
+}
 
 // Global Error Boundary — auto-resets on route change so navigating away from a crashed page auto-recovers
 class ErrorBoundary extends Component {
@@ -136,43 +149,45 @@ export default function App() {
             playUiClick={playUiClick}
           />
 
-          {/* Router Views Container with Framer Motion Page Transitions */}
+          {/* Router Views Container with Framer Motion Page Transitions & React Suspense Code Splitting */}
           <main id="main-content" className="flex-1">
             <AnimatePresence mode="wait">
-              <Routes location={location} key={location.pathname}>
-                <Route
-                  path="/"
-                  element={
-                    <HomePage
-                      playUiClick={playUiClick}
-                      playHeavenlyMusic={playHeavenlyMusic}
-                      playConfettiSound={playConfettiSound}
-                    />
-                  }
-                />
-                <Route
-                  path="/timeline"
-                  element={
-                    <TimelinePage
-                      playUiClick={playUiClick}
-                      playHeavenlyMusic={playHeavenlyMusic}
-                      playConfettiSound={playConfettiSound}
-                    />
-                  }
-                />
-                <Route
-                  path="/expertise"
-                  element={<ExpertisePage playClickSound={playUiClick} />}
-                />
-                <Route
-                  path="/terminal"
-                  element={<TerminalPage playClickSound={playUiClick} />}
-                />
-                <Route
-                  path="/feedback"
-                  element={<FeedbackPage playClickSound={playUiClick} />}
-                />
-              </Routes>
+              <Suspense fallback={<CyberRouteLoader />}>
+                <Routes location={location} key={location.pathname}>
+                  <Route
+                    path="/"
+                    element={
+                      <HomePage
+                        playUiClick={playUiClick}
+                        playHeavenlyMusic={playHeavenlyMusic}
+                        playConfettiSound={playConfettiSound}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/timeline"
+                    element={
+                      <TimelinePage
+                        playUiClick={playUiClick}
+                        playHeavenlyMusic={playHeavenlyMusic}
+                        playConfettiSound={playConfettiSound}
+                      />
+                    }
+                  />
+                  <Route
+                    path="/expertise"
+                    element={<ExpertisePage playClickSound={playUiClick} />}
+                  />
+                  <Route
+                    path="/terminal"
+                    element={<TerminalPage playClickSound={playUiClick} />}
+                  />
+                  <Route
+                    path="/feedback"
+                    element={<FeedbackPage playClickSound={playUiClick} />}
+                  />
+                </Routes>
+              </Suspense>
             </AnimatePresence>
           </main>
 

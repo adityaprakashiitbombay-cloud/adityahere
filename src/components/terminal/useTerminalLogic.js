@@ -210,9 +210,15 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
         }
       }
 
-      return cleanMarkdownText(synthesizeDynamicResponse(userPrompt));
+      const localFallback = synthesizeDynamicResponse(userPrompt);
+      return `🌐 [NEMOTRON AGENT // LOCAL MATRIX ENGINE RESPONSE]
+--------------------------------------------------
+${cleanMarkdownText(localFallback)}`;
     } catch (err) {
-      return cleanMarkdownText(synthesizeDynamicResponse(userPrompt));
+      const localFallback = synthesizeDynamicResponse(userPrompt);
+      return `🌐 [NEMOTRON AGENT // LOCAL MATRIX ENGINE RESPONSE]
+--------------------------------------------------
+${cleanMarkdownText(localFallback)}`;
     }
   };
 
