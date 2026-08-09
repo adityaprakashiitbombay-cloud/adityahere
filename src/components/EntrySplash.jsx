@@ -50,7 +50,10 @@ export default function EntrySplash({ onFinish, onComplete }) {
     const handleGesture = (e) => {
       if (e.type === 'keydown') {
         if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
-          handleFinish();
+          // Allow shortcut only when preloading is 100% complete
+          if (progress >= 100) {
+            handleFinish();
+          }
         }
       }
     };
@@ -62,7 +65,9 @@ export default function EntrySplash({ onFinish, onComplete }) {
       clearInterval(logTimer);
       window.removeEventListener('keydown', handleGesture);
     };
-  }, []);
+  }, [progress]);
+
+  const isReady = progress >= 100;
 
   return (
     <motion.div
@@ -70,8 +75,12 @@ export default function EntrySplash({ onFinish, onComplete }) {
       initial={{ opacity: 1 }}
       exit={{ y: "-100vh", opacity: 0 }}
       transition={{ duration: 0.65, ease: [0.76, 0, 0.24, 1] }}
-      onClick={handleFinish}
-      className="fixed inset-0 z-50 bg-[#000000] text-white flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-[#39FF14] selection:text-black font-mono overflow-hidden cursor-pointer"
+      onClick={() => {
+        if (isReady) handleFinish();
+      }}
+      className={`fixed inset-0 z-50 bg-[#000000] text-white flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-[#39FF14] selection:text-black font-mono overflow-hidden ${
+        isReady ? 'cursor-pointer' : 'cursor-wait'
+      }`}
     >
       {/* Background Matrix Grid Overlay with Motion Scanline */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#39FF140c_1px,transparent_1px),linear-gradient(to_bottom,#39FF140c_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none opacity-60" />
@@ -97,7 +106,7 @@ export default function EntrySplash({ onFinish, onComplete }) {
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-[#00E5FF] font-mono lowercase hidden sm:inline">
-              [ readying main page ]
+              [ {isReady ? 'system ready' : 'readying main page'} ]
             </span>
             <span className="text-xs text-[#39FF14] font-black font-mono tabular-nums">
               {Math.round(progress)}%
@@ -143,20 +152,25 @@ export default function EntrySplash({ onFinish, onComplete }) {
         <div className="pt-4 border-t-2 border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
           <span className="text-[#39FF14] text-xs font-bold lowercase flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-[#39FF14]" />
-            {progress >= 100 ? 'assets loaded 100% • system ready!' : 'preloading system assets...'}
+            {isReady ? 'assets loaded 100% • system ready!' : 'preloading system assets...'}
           </span>
 
           <button
             type="button"
+            disabled={!isReady}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleFinish();
+              if (isReady) handleFinish();
             }}
-            className="bg-[#39FF14] text-black border-2 border-white px-5 py-2 text-xs flex items-center gap-2 font-black uppercase cursor-pointer relative z-10 shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[6px_6px_0px_0px_#ffffff] hover:scale-105 active:scale-95 transition-all animate-pulse"
+            className={`border-2 px-5 py-2 text-xs flex items-center gap-2 font-black uppercase transition-all ${
+              isReady
+                ? 'bg-[#39FF14] text-black border-white cursor-pointer relative z-10 shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[6px_6px_0px_0px_#ffffff] hover:scale-105 active:scale-95 animate-pulse'
+                : 'bg-neutral-800 text-neutral-500 border-neutral-600 cursor-not-allowed opacity-50 shadow-none'
+            }`}
           >
-            <span>enter system now</span>
-            <Play className="w-4 h-4 fill-black" />
+            <span>{isReady ? 'enter system now' : 'loading (please wait...)'}</span>
+            <Play className={`w-4 h-4 ${isReady ? 'fill-black' : 'fill-neutral-500'}`} />
           </button>
         </div>
       </div>

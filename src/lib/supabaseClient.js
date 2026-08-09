@@ -855,10 +855,28 @@ export async function upgradeSessionWithGPSLocation() {
   }
 }
 
+export function isBotVisitor() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const ua = (navigator.userAgent || '').toLowerCase();
+  
+  if (navigator.webdriver) return true;
+  if (window._phantom || window.callPhantom || window.__nightmare) return true;
+
+  const botSignatures = [
+    'bot', 'spider', 'crawler', 'headless', 'puppet', 'selenium',
+    'playwright', 'cypress', 'lighthouse', 'python-requests', 'urllib',
+    'curl', 'wget', 'postman', 'axios', 'golang', 'java/', 'node-fetch',
+    'scrp', 'scan', 'gtmetrix', 'bingpreview', 'facebookexternalhit',
+    'discordbot', 'telegrambot', 'twitterbot', 'whatsapp', 'duckduckbot',
+    'baiduspider', 'yandexbot', 'ahrefs', 'semrush', 'dotbot', 'exabot'
+  ];
+
+  return botSignatures.some(sig => ua.includes(sig));
+}
+
 export function sanitizeLocation(loc) {
   if (!loc || typeof loc !== 'string') return '📡 IP Net: Local';
   if (loc.includes('GPS Exact')) {
-    // If exact GPS location is present, extract and return strictly the GPS exact location
     const parts = loc.split('|').map(s => s.trim()).filter(Boolean);
     const gpsPart = parts.find(p => p.includes('GPS Exact'));
     if (gpsPart) return gpsPart;
@@ -867,15 +885,22 @@ export function sanitizeLocation(loc) {
 }
 
 export async function recordRealVisitorSession() {
+  if (isBotVisitor()) {
+    console.log('🤖 Bot / Headless crawler traffic detected & filtered from visitor telemetry.');
+    return null;
+  }
+
   try {
     const geo = await fetchRealVisitorLocation();
     const deviceId = getOrCreateVisitorDeviceId();
     const sessionId = 'vis_' + Date.now();
     currentActiveSessionId = sessionId;
 
-    const nowIso = new Date().toISOString();
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const initialActivity = `📍 Visit Session Started (${timeStr})`;
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const initialActivity = `[${dateStr}, ${timeStr}] 📍 Visit Session Started`;
 
     const storedLogs = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
     let existingProfiles = storedLogs ? JSON.parse(storedLogs) : [];
@@ -979,11 +1004,6 @@ export async function recordRealVisitorSession() {
       } catch (e) {}
     }
 
-    // Trigger high-accuracy GPS upgrade asynchronously in background
-    setTimeout(() => {
-      upgradeSessionWithGPSLocation();
-    }, 1200);
-
     return profileRecord;
   } catch (e) {
     return null;
@@ -991,6 +1011,8 @@ export async function recordRealVisitorSession() {
 }
 
 export async function updateVisitorDwellTime(seconds) {
+  if (isBotVisitor()) return;
+
   const deviceId = getOrCreateVisitorDeviceId();
   try {
     const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
@@ -1035,12 +1057,14 @@ export async function updateVisitorDwellTime(seconds) {
 }
 
 export async function logVisitorActivity(activityDescription) {
-  if (!activityDescription) return;
+  if (!activityDescription || isBotVisitor()) return;
 
   const deviceId = getOrCreateVisitorDeviceId();
   try {
-    const timeTag = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const formattedAction = `[${timeTag}] ${activityDescription}`;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const formattedAction = `[${dateStr}, ${timeStr}] ${activityDescription}`;
 
     const stored = localStorage.getItem(REAL_VISITOR_LOGS_KEY);
     if (stored) {
