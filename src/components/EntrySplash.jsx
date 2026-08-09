@@ -26,9 +26,12 @@ export default function EntrySplash({ onFinish, onComplete }) {
     if (onComplete) onComplete();
   };
 
+  const progressRef = useRef(0);
+  progressRef.current = progress;
+
   useEffect(() => {
-    // 4.5s 60FPS Continuous Butter-Smooth Preloader
-    const duration = 4500;
+    // 2.5s 60FPS Continuous Butter-Smooth Preloader
+    const duration = 2500;
     const startTime = performance.now();
     let animId;
 
@@ -45,13 +48,12 @@ export default function EntrySplash({ onFinish, onComplete }) {
 
     const logTimer = setInterval(() => {
       setLogIndex((prev) => (prev < bootLogs.length - 1 ? prev + 1 : prev));
-    }, 550);
+    }, 350);
 
     const handleGesture = (e) => {
       if (e.type === 'keydown') {
         if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
-          // Allow shortcut only when preloading is 100% complete
-          if (progress >= 100) {
+          if (progressRef.current >= 100) {
             handleFinish();
           }
         }
@@ -65,7 +67,7 @@ export default function EntrySplash({ onFinish, onComplete }) {
       clearInterval(logTimer);
       window.removeEventListener('keydown', handleGesture);
     };
-  }, [progress]);
+  }, []);
 
   const isReady = progress >= 100;
 
