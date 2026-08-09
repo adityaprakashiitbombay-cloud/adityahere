@@ -141,31 +141,31 @@ export default function AdminEditModal({ isOpen, onClose, initialTab = 'hero' })
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md font-mono">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/85 backdrop-blur-md font-mono overscroll-contain">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="w-full max-w-4xl max-h-[90vh] bg-[#080808] border-3 border-[#39FF14] shadow-[12px_12px_0px_0px_#39FF14] flex flex-col overflow-hidden text-white"
+        className="w-full max-w-4xl max-h-[92dvh] max-h-[92vh] bg-[#080808] border-3 border-[#39FF14] shadow-[12px_12px_0px_0px_#39FF14] flex flex-col overflow-hidden text-white"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 bg-black border-b-2 border-white">
+        <div className="flex items-center justify-between p-3.5 sm:p-4 bg-black border-b-2 border-white sticky top-0 z-20">
           <div className="flex items-center gap-2">
             <div className="p-1 bg-[#39FF14] text-black font-black text-xs">
               ALPHA1845
             </div>
-            <h2 className="text-sm font-black tracking-tight text-white uppercase flex items-center gap-1.5">
+            <h2 className="text-xs sm:text-sm font-black tracking-tight text-white uppercase flex items-center gap-1.5">
               <span>LIVE SERVER CMS & CONTENT EDITOR</span>
-              <span className="text-[10px] text-[#00E5FF] font-bold">[SYNCED]</span>
+              <span className="text-[10px] text-[#00E5FF] font-bold hidden sm:inline">[SYNCED]</span>
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 bg-black border border-white text-white hover:bg-neutral-800 cursor-pointer shadow-[2px_2px_0px_0px_#ffffff]"
+            className="p-2 bg-black border border-white text-white hover:bg-neutral-800 cursor-pointer shadow-[2px_2px_0px_0px_#ffffff] min-w-[40px] min-h-[40px] flex items-center justify-center active:scale-95"
             title="Close Editor"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

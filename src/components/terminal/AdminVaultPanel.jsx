@@ -23,6 +23,17 @@ export default function AdminVaultPanel({
 
   if (!isAdminUnlocked) return null;
 
+  React.useEffect(() => {
+    if (showVisitorModal || selectedVisitor) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showVisitorModal, selectedVisitor]);
+
   const handleOpenVisitorModal = async () => {
     setIsLoading(true);
     setShowVisitorModal(true);
@@ -70,14 +81,14 @@ export default function AdminVaultPanel({
             <button
               type="button"
               onClick={handleOpenVisitorModal}
-              className="bg-[#00E5FF] text-black px-2.5 py-1 font-black uppercase text-xs border border-white shadow-[2px_2px_0px_0px_#ffffff] cursor-pointer active:scale-95 transition-transform flex items-center gap-1"
+              className="bg-[#00E5FF] text-black px-3 py-1.5 font-black uppercase text-xs border border-white shadow-[2px_2px_0px_0px_#ffffff] cursor-pointer active:scale-95 transition-transform flex items-center gap-1.5 min-h-[40px] sm:min-h-[34px]"
             >
-              <Globe className="w-3.5 h-3.5" /> 🌐 VISITORS TABLE ({sessions.length} PROFILES)
+              <Globe className="w-4 h-4" /> 🌐 VISITORS TABLE ({sessions.length} PROFILES)
             </button>
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent('openAdminModal', { detail: 'hero' }))}
-              className="bg-[#39FF14] text-black px-2.5 py-1 font-black uppercase text-xs border border-white shadow-[2px_2px_0px_0px_#ffffff] cursor-pointer active:scale-95 transition-transform"
+              className="bg-[#39FF14] text-black px-3 py-1.5 font-black uppercase text-xs border border-white shadow-[2px_2px_0px_0px_#ffffff] cursor-pointer active:scale-95 transition-transform min-h-[40px] sm:min-h-[34px]"
             >
               ✏️ EDIT ALL TABS
             </button>
@@ -90,7 +101,11 @@ export default function AdminVaultPanel({
             placeholder="Topic / Key (e.g. 'favorite book', 'dream college')"
             value={feedKey}
             onChange={(e) => setFeedKey(e.target.value)}
-            className="sm:col-span-4 brutal-input p-2 text-xs font-mono bg-[#000000]"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck="false"
+            className="sm:col-span-4 brutal-input p-2.5 sm:p-2 text-[16px] sm:text-xs font-mono bg-[#000000] min-h-[44px] sm:min-h-[36px]"
             required
           />
           <input
@@ -98,14 +113,18 @@ export default function AdminVaultPanel({
             placeholder="Fact / Answer to feed into AI memory..."
             value={feedVal}
             onChange={(e) => setFeedVal(e.target.value)}
-            className="sm:col-span-6 brutal-input p-2 text-xs font-mono bg-[#000000]"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck="false"
+            className="sm:col-span-6 brutal-input p-2.5 sm:p-2 text-[16px] sm:text-xs font-mono bg-[#000000] min-h-[44px] sm:min-h-[36px]"
             required
           />
           <button
             type="submit"
-            className="sm:col-span-2 brutal-btn bg-[#39FF14] text-black font-bold p-2 text-xs flex items-center justify-center gap-1 font-mono cursor-pointer"
+            className="sm:col-span-2 brutal-btn bg-[#39FF14] text-black font-bold p-2.5 sm:p-2 text-xs flex items-center justify-center gap-1 font-mono cursor-pointer active:scale-95 min-h-[44px] sm:min-h-[36px]"
           >
-            <Plus className="w-3.5 h-3.5" /> FEED FACT
+            <Plus className="w-4 h-4" /> FEED FACT
           </button>
         </form>
 
@@ -123,19 +142,19 @@ export default function AdminVaultPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 font-mono"
+            className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-6 font-mono overscroll-contain"
           >
               <motion.div
                 initial={{ scale: 0.95, y: 15 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 15 }}
-                className="bg-[#050505] border-3 border-[#00E5FF] w-full max-w-5xl max-h-[88vh] flex flex-col shadow-[8px_8px_0px_0px_#00E5FF] overflow-hidden relative z-[999999]"
+                className="bg-[#050505] border-3 border-[#00E5FF] w-full max-w-5xl max-h-[92dvh] max-h-[92vh] flex flex-col shadow-[8px_8px_0px_0px_#00E5FF] overflow-hidden relative z-[999999]"
               >
               {/* Header Bar */}
-              <div className="bg-[#111111] border-b-2 border-[#00E5FF] p-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="bg-[#111111] border-b-2 border-[#00E5FF] p-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-[#00E5FF] animate-pulse" />
-                  <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wider">
+                  <Globe className="w-5 h-5 text-[#00E5FF] animate-pulse shrink-0" />
+                  <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-wider">
                     🌐 VISITOR DATA DIRECTORY & PROFILE MANAGER ({sessions.length} DEVICELOGS)
                   </h2>
                 </div>
@@ -148,23 +167,24 @@ export default function AdminVaultPanel({
                       setSessions(d || []);
                       setIsLoading(false);
                     }}
-                    className="bg-[#111] text-[#00E5FF] border border-[#00E5FF] px-2.5 py-1 text-xs font-bold flex items-center gap-1 hover:bg-[#00E5FF] hover:text-black cursor-pointer"
+                    className="bg-[#111] text-[#00E5FF] border border-[#00E5FF] px-2.5 py-1.5 text-xs font-bold flex items-center gap-1 hover:bg-[#00E5FF] hover:text-black cursor-pointer active:scale-95 min-h-[38px]"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} /> REFRESH
                   </button>
 
                   <button
                     onClick={handleClearSessions}
-                    className="bg-[#111] text-red-400 border border-red-500 px-2.5 py-1 text-xs font-bold flex items-center gap-1 hover:bg-red-500 hover:text-black cursor-pointer"
+                    className="bg-[#111] text-red-400 border border-red-500 px-2.5 py-1.5 text-xs font-bold flex items-center gap-1 hover:bg-red-500 hover:text-black cursor-pointer active:scale-95 min-h-[38px]"
                   >
                     <Trash2 className="w-3.5 h-3.5" /> PURGE LOGS
                   </button>
 
                   <button
                     onClick={() => setShowVisitorModal(false)}
-                    className="bg-red-500 text-black border border-white p-1 font-bold cursor-pointer hover:scale-105"
+                    className="bg-red-500 text-black border border-white p-2 font-bold cursor-pointer hover:scale-105 active:scale-95 min-w-[42px] min-h-[42px] flex items-center justify-center"
+                    title="Close Modal"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -208,13 +228,17 @@ export default function AdminVaultPanel({
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <Search className="w-4 h-4 text-[#00E5FF]" />
+                  <Search className="w-4 h-4 text-[#00E5FF] shrink-0" />
                   <input
                     type="text"
                     placeholder="Filter by Device ID, IP, location history, ISP or activity logs..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="bg-[#050505] border border-neutral-700 p-2 text-xs text-white w-full focus:outline-none focus:border-[#00E5FF]"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    spellCheck="false"
+                    className="bg-[#050505] border border-neutral-700 p-2.5 sm:p-2 text-[16px] sm:text-xs text-white w-full focus:outline-none focus:border-[#00E5FF] min-h-[44px] sm:min-h-[36px]"
                   />
                 </div>
               </div>

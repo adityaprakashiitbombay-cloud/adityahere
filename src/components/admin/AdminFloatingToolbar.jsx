@@ -32,7 +32,7 @@ export default function AdminFloatingToolbar() {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 50, opacity: 0 }}
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl bg-[#000000] border-3 border-[#39FF14] p-3 shadow-[6px_6px_0px_0px_#39FF14] font-mono text-xs text-white"
+        className="fixed bottom-4 sm:bottom-6 mb-[env(safe-area-inset-bottom)] left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl bg-[#000000] border-3 border-[#39FF14] p-3 shadow-[6px_6px_0px_0px_#39FF14] font-mono text-xs text-white"
       >
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Admin Indicator */}
