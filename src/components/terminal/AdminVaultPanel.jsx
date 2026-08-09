@@ -117,15 +117,14 @@ export default function AdminVaultPanel({
       </motion.div>
 
       {/* 100-Visitor Full-Screen Telemetry Directory Modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {showVisitorModal && typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
-          {showVisitorModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 font-mono"
-            >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 font-mono"
+          >
               <motion.div
                 initial={{ scale: 0.95, y: 15 }}
                 animate={{ scale: 1, y: 0 }}
@@ -312,10 +311,9 @@ export default function AdminVaultPanel({
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body
-    )}
+        </AnimatePresence>,
+        document.body
+      )}
 
     {/* Dedicated Single Visitor Profile Inspector Modal */}
     {typeof document !== 'undefined' && selectedVisitor && createPortal(

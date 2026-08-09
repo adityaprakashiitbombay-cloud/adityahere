@@ -5,7 +5,12 @@ import { fetchPrivateMessages, fetchAiChatLogs, saveAiChatConversation, clearAll
 import { applyTheme } from '../ThemeSwitcher';
 
 const FED_KNOWLEDGE_STORAGE_KEY = 'adityahere_fed_ai_knowledge_v1';
-const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || import.meta.env.VITE_AI_API_KEY || '';
+const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.VITE_AI_API_KEY || '';
+
+const sanitizeInputText = (str) => {
+  if (!str || typeof str !== 'string') return '';
+  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
+};
 
 const cleanMarkdownText = (str) => {
   if (!str) return '';
@@ -109,6 +114,9 @@ export function useTerminalLogic({ playClickSound } = {}) {
     }
   }, [searchParams]);
 
+  const [failedAuthAttempts, setFailedAuthAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState(0);
+
   const toggleLiveEdit = (enable) => {
     const nextState = enable !== undefined ? enable : !isLiveEditActive;
     setIsLiveEditActive(nextState);
@@ -116,12 +124,14 @@ export function useTerminalLogic({ playClickSound } = {}) {
 
   const handleAddFedKnowledge = (e) => {
     e?.preventDefault();
-    if (!feedKey.trim() || !feedVal.trim()) return;
+    const cleanKey = sanitizeInputText(feedKey);
+    const cleanVal = sanitizeInputText(feedVal);
+    if (!cleanKey || !cleanVal) return;
 
     const newItem = {
       id: Date.now(),
-      topic: feedKey.trim(),
-      content: feedVal.trim(),
+      topic: cleanKey,
+      content: cleanVal,
       timestamp: new Date().toISOString()
     };
 
@@ -152,7 +162,9 @@ Key Achievements:
 Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.`;
 
     try {
-      const apiKey = NVIDIA_API_KEY || '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';
+      const apiKey = NVIDIA_API_KEY;
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://adityahere.vercel.app';
+
       if (apiKey) {
         const isOr = apiKey.startsWith('sk-or-');
         const url = isOr
@@ -162,7 +174,7 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
         const headers = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://adityahere.vercel.app',
+          'HTTP-Referer': currentOrigin,
           'X-Title': 'adityahere'
         };
 
@@ -250,7 +262,14 @@ Answer user queries with extreme intelligence, clarity, and neo-brutalist charm.
     logVisitorActivity(`CLI: ${q.slice(0, 30)}`);
 
     if (q === 'ALPHA1845' || qLower === 'alpha1845') {
+      const now = Date.now();
+      if (lockoutUntil && now < lockoutUntil) {
+        const secsLeft = Math.ceil((lockoutUntil - now) / 1000);
+        return `⛔ SECURITY LOCKOUT: Too many invalid passcode attempts. Please wait ${secsLeft}s before retrying.`;
+      }
+
       setIsAdminUnlocked(true);
+      setFailedAuthAttempts(0);
       localStorage.setItem('adityahere_admin_unlocked', 'true');
       window.dispatchEvent(new Event('adminAuthChanged'));
       if (playClickSound) playClickSound();
@@ -272,6 +291,21 @@ AVAILABLE ADMIN COMMANDS & SHORTCUTS:
 • dm <msg>     : Send direct private message to vault
 • lock         : Lock Admin mode & return to guest mode
 • clear        : Clear terminal screen`;
+    }
+
+    if (qLower.includes('alpha') && q !== 'ALPHA1845') {
+      const now = Date.now();
+      if (lockoutUntil && now < lockoutUntil) {
+        const secsLeft = Math.ceil((lockoutUntil - now) / 1000);
+        return `⛔ SECURITY LOCKOUT: Please wait ${secsLeft}s before retrying passcode.`;
+      }
+      const newCount = failedAuthAttempts + 1;
+      setFailedAuthAttempts(newCount);
+      if (newCount >= 5) {
+        setLockoutUntil(Date.now() + 30000);
+        return `⛔ TOO MANY INVALID ATTEMPTS: Admin authorization locked for 30 seconds.`;
+      }
+      return `❌ INVALID ADMIN PASSCODE (Attempt ${newCount}/5).`;
     }
 
     if (qLower === 'visitors' || qLower === 'analytics' || qLower === 'ips') {

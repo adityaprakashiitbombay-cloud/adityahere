@@ -708,30 +708,32 @@ export function requestExactGPSLocation() {
 }
 
 export async function fetchRealVisitorLocation() {
-  const token = import.meta.env.VITE_IPINFO_TOKEN || 'cbeda1c63da1c3';
+  const token = import.meta.env.VITE_IPINFO_TOKEN;
 
-  // Primary: IPInfo API with token
-  try {
-    const res = await fetch(`https://ipinfo.io/json?token=${token}`, { timeout: 4000 });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.ip) {
-        const locName = `${data.city || 'Live'}, ${data.region || ''}, ${data.country || 'IN'} (${data.org || 'ISP'})`;
-        return {
-          ip: data.ip,
-          city: data.city || 'Local',
-          region: data.region || '',
-          country: data.country || 'Online',
-          org: data.org || 'ISP Network',
-          postal: data.postal || '',
-          ipInfoLocation: `📡 IPInfo Net: ${data.city || ''}, ${data.region || ''}, ${data.country || ''} (${data.org || 'ISP'})`,
-          location: `📡 IPInfo Net: ${locName}`,
-          device: getDeviceType()
-        };
+  // Primary: IPInfo API with token if available
+  if (token) {
+    try {
+      const res = await fetch(`https://ipinfo.io/json?token=${token}`, { timeout: 4000 });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ip) {
+          const locName = `${data.city || 'Live'}, ${data.region || ''}, ${data.country || 'IN'} (${data.org || 'ISP'})`;
+          return {
+            ip: data.ip,
+            city: data.city || 'Local',
+            region: data.region || '',
+            country: data.country || 'Online',
+            org: data.org || 'ISP Network',
+            postal: data.postal || '',
+            ipInfoLocation: `📡 IPInfo Net: ${data.city || ''}, ${data.region || ''}, ${data.country || ''} (${data.org || 'ISP'})`,
+            location: `📡 IPInfo Net: ${locName}`,
+            device: getDeviceType()
+          };
+        }
       }
+    } catch (e) {
+      console.warn('IPInfo API lookup error, using fallback:', e);
     }
-  } catch (e) {
-    console.warn('IPInfo API lookup error, using fallback:', e);
   }
 
   // Fallback 1: ipapi.co
@@ -860,7 +862,9 @@ export function isBotVisitor() {
   const ua = (navigator.userAgent || '').toLowerCase();
   
   if (navigator.webdriver) return true;
-  if (window._phantom || window.callPhantom || window.__nightmare) return true;
+  if (window._phantom || window.callPhantom || window.__nightmare || window.domAutomation || window.domAutomationController) return true;
+  if (window.navigator.languages === undefined || (window.navigator.languages && window.navigator.languages.length === 0)) return true;
+  if (window.outerWidth === 0 && window.outerHeight === 0) return true;
 
   const botSignatures = [
     'bot', 'spider', 'crawler', 'headless', 'puppet', 'selenium',
@@ -868,7 +872,8 @@ export function isBotVisitor() {
     'curl', 'wget', 'postman', 'axios', 'golang', 'java/', 'node-fetch',
     'scrp', 'scan', 'gtmetrix', 'bingpreview', 'facebookexternalhit',
     'discordbot', 'telegrambot', 'twitterbot', 'whatsapp', 'duckduckbot',
-    'baiduspider', 'yandexbot', 'ahrefs', 'semrush', 'dotbot', 'exabot'
+    'baiduspider', 'yandexbot', 'ahrefs', 'semrush', 'dotbot', 'exabot',
+    'headful', 'phantomjs', 'slimerjs', 'casperjs'
   ];
 
   return botSignatures.some(sig => ua.includes(sig));
@@ -1022,7 +1027,7 @@ export async function updateVisitorDwellTime(seconds) {
     const updated = profiles.map(p => {
       if (p.deviceId === deviceId || p.id === currentActiveSessionId) {
         const prevSessionSeconds = p.currentSessionSeconds || 0;
-        const delta = Math.max(1, seconds - prevSessionSeconds);
+        const delta = Math.max(0, Math.floor(seconds - prevSessionSeconds));
         targetProfile = {
           ...p,
           currentSessionSeconds: seconds,
