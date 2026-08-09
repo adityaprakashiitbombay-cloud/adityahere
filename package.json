@@ -2,7 +2,6 @@
   "name": "my-profile-io",
   "private": true,
   "version": "2.0.0",
-
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.4.7",
     "lucide-react": "^0.475.0",

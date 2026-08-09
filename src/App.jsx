@@ -10,6 +10,7 @@ import AdminFloatingToolbar from './components/admin/AdminFloatingToolbar';
 import { useSoundEffects } from './hooks/useSoundEffects';
 import { fireAcademicVictoryConfetti } from './utils/confettiEffects';
 import { updateVisitorDwellTime, logVisitorActivity } from './lib/supabaseClient';
+import { Analytics } from '@vercel/analytics/react';
 
 // React Code-Splitting: Lazy load page chunks on demand to minimize initial boot size
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -125,6 +126,7 @@ export default function App() {
 
   return (
     <ErrorBoundary locationKey={location.pathname}>
+      <Analytics />
       {/* Hidden Pre-buffered Victory Audio Track */}
       <audio id="global-victory-audio" src="/romancee.mp3" preload="auto" className="hidden" />
 
